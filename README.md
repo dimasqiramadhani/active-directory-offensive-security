@@ -1,12 +1,4 @@
 # Active Directory Red Team Detection Lab
-## Full Kill Chain Simulation with Wazuh Blue Team Detection
-
-**Author:** Dimas Qira Ramadhani | **Handle:** laborology
-**Date:** June 19, 2026
-**Domain:** lab.local | **SIEM:** Wazuh 4.14.5 Multi-Node
-**GitHub:** github.com/dimasqiramadhani | **LinkedIn:** linkedin.com/in/dimasqiramadhani
-
----
 
 ## Project Overview
 
