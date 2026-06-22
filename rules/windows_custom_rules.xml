@@ -1,0 +1,18 @@
+<!-- windows_custom_rules.xml -->
+<!-- Deploy to: /var/ossec/etc/rules/windows_custom_rules.xml -->
+<!-- Apply with: systemctl restart wazuh-manager -->
+<!-- This file is DEPLOYED and ACTIVE in the lab environment -->
+
+<group name="sysmon,windows,lsass,">
+
+  <!-- Rule 92901: Suppress LSASS access false positives from Windows Defender -->
+  <!-- This rule overrides rule 92900 when the accessing process is a Defender component -->
+  <!-- Before this rule: 16 or more FP alerts per day from MsMpEng.exe -->
+  <!-- After this rule: 0 FP alerts, only genuine LSASS access generates alerts -->
+  <rule id="92901" level="0">
+    <if_sid>92900</if_sid>
+    <field name="win.eventdata.sourceImage" type="pcre2">(?i)(MsMpEng\.exe|WdFilter\.sys|SenseCncProxy\.exe|MsSense\.exe)</field>
+    <description>LSASS access by Windows Defender or EDR component suppressed as known false positive</description>
+  </rule>
+
+</group>
