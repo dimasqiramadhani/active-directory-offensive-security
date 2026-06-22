@@ -1,7 +1,5 @@
 # Active Directory Red Team Detection Lab
 
-## Project Overview
-
 This project documents a full end-to-end red team simulation against an Active Directory environment using real-world attack techniques. Every attack phase is paired with blue team detection analysis via Wazuh SIEM, including rule tuning and detection gap identification. This documentation captures exactly what happened during the lab session, including errors, troubleshooting steps, and environment constraints.
 
 ---
