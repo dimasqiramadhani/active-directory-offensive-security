@@ -1,163 +1,310 @@
 <!-- windows_redteam_detection.xml -->
 <!-- Full detection ruleset for AD red team kill chain -->
 <!-- Deploy to: /var/ossec/etc/rules/windows_redteam_detection.xml -->
-<!-- Rule IDs: 92750 through 92760 -->
-<!-- Status: Recommended but not yet deployed in lab -->
+<!-- Rule IDs: 92750 through 92767 -->
+<!-- Version: 2 (anchors corrected, value matching made format-tolerant, coverage gaps closed) -->
+<!--
+  CHANGELOG v1 -> v2
+  - 92750 (BloodHound/4662) : if_sid 60103 -> 60109, converted to frequency rule (volume-based)
+  - 92760 (DCSync/4662)     : if_sid 60103 -> 60109 (same root cause)
+  - 92755/56/57/58          : exact-string value matches replaced with pcre2 zero-pad-tolerant patterns
+  - 92759 (service install) : if_sid 60103 -> 60109
+  - 92901 suppression       : REMOVED from this file (lives only in windows_custom_rules.xml to avoid duplicate ID)
+  - NEW 92761 Defender tamper via Defender Operational channel (5001/5010/5012/5101)
+  - NEW 92762 AMSI bypass pattern via 4104 script block
+  - NEW 92763 Forged-ticket REJECTION (4769 status 0x1F/0x1B/0x29) - the WS2022 PAC rejection actually observed
+  - NEW 92764 Domain password policy weakened (4739)
+  - NEW 92765 Account flipped to DONT_REQUIRE_PREAUTH (4738) - creates AS-REP roastable target
+  - NEW 92766 Privileged group membership change (4728/4732/4756 to RID 512/518/519)
+  - NEW 92767 Defender tamper via Sysmon registry route (policy key write)
+
+  NOTE on if_sid values: 60109 is the Windows eventchannel decoder root for Security-log events
+  in the stock Wazuh ruleset; 61650 is the Sysmon registry base; 92100 is the PowerShell
+  script-block base; 62100 is the Windows Defender eventchannel base. These vary by ruleset
+  version. Before trusting any rule below, verify the real decoder parent for one sample event:
+    GET wazuh-alerts-*/_search { "query": { "match": { "rule.id": "<observed_rule>" } },
+      "_source": ["rule.id","decoder.parent","decoder.name"], "size": 1 }
+  and adjust if_sid to the observed decoder.parent. Do NOT assume; verify per environment.
+-->
 
 <group name="ad_redteam_detection,windows,">
 
-  <!-- Phase 1: Reconnaissance -->
-  <!-- Detects high-volume LDAP queries consistent with BloodHound or SharpHound collection -->
-  <rule id="92750" level="10">
-    <if_sid>60103</if_sid>
+  <!-- =========================================================== -->
+  <!-- Phase 1: Reconnaissance                                     -->
+  <!-- High-volume DirectoryService access from one principal,     -->
+  <!-- consistent with BloodHound/SharpHound collection.           -->
+  <!-- =========================================================== -->
+  <rule id="92750" level="10" frequency="15" timeframe="30">
+    <if_matched_sid>60109</if_matched_sid>
     <field name="win.system.eventID">^4662$</field>
-    <description>High volume Directory Service Access detected, possible AD enumeration by BloodHound or similar tool</description>
+    <same_field>win.eventdata.subjectUserName</same_field>
+    <description>High volume Directory Service Access from a single principal: possible AD enumeration (BloodHound/SharpHound).</description>
     <mitre>
       <id>T1087.002</id>
+      <id>T1069.002</id>
     </mitre>
-    <group>reconnaissance,ad_enumeration</group>
+    <group>reconnaissance,ad_enumeration,</group>
   </rule>
 
-  <!-- Phase 2: Password Spray -->
-  <!-- Frequency-based rule: 5 or more failures from same IP to different users within 60 seconds -->
+  <!-- =========================================================== -->
+  <!-- Phase 2: Password Spray                                     -->
+  <!-- 5+ failures from same IP to different users within 60s.     -->
+  <!-- =========================================================== -->
   <rule id="92751" level="12" frequency="5" timeframe="60">
-    <if_matched_sid>60106</if_matched_sid>
-    <same_field>data.win.eventdata.ipAddress</same_field>
-    <different_field>data.win.eventdata.targetUserName</different_field>
-    <description>Password spray detected: multiple authentication failures from same source IP targeting different usernames</description>
+    <if_matched_sid>60122</if_matched_sid>
+    <same_field>win.eventdata.ipAddress</same_field>
+    <different_field>win.eventdata.targetUserName</different_field>
+    <description>Password spray detected: multiple authentication failures from one source IP against different usernames.</description>
     <mitre>
       <id>T1110.003</id>
     </mitre>
-    <group>brute_force,password_spray</group>
+    <group>brute_force,password_spray,</group>
   </rule>
 
-  <!-- Phase 3: Suspicious PowerShell Execution -->
-  <!-- Catches AMSI bypass, download cradle, and encoded command patterns -->
+  <!-- =========================================================== -->
+  <!-- Phase 3: Suspicious PowerShell (AMSI bypass / cradle / enc) -->
+  <!-- Anchor 92100 = PowerShell ScriptBlock (4104) base rule.     -->
+  <!-- =========================================================== -->
   <rule id="92752" level="14">
     <if_sid>92100</if_sid>
-    <field name="win.eventdata.scriptBlockText" type="pcre2">(?i)(AmsiUtils|Invoke-Mimikatz|IEX.*DownloadString|EncodedCommand|Net\.WebClient|System\.Reflection\.Assembly)</field>
-    <description>Suspicious PowerShell content detected: AMSI bypass, download cradle, or obfuscated command</description>
+    <field name="win.eventdata.scriptBlockText" type="pcre2">(?i)(AmsiUtils|amsiInitFailed|Invoke-Mimikatz|IEX\s*\(|DownloadString|DownloadData|FromBase64String|EncodedCommand|Net\.WebClient|System\.Reflection\.Assembly|VirtualProtect|memcpy)</field>
+    <description>Suspicious PowerShell content: AMSI bypass, download cradle, reflective load, or obfuscated command.</description>
     <mitre>
       <id>T1059.001</id>
       <id>T1562.001</id>
     </mitre>
-    <group>execution,powershell,defense_evasion</group>
+    <group>execution,powershell,defense_evasion,</group>
   </rule>
 
-  <!-- Phase 3: Scheduled Task Created -->
+  <!-- Phase 3: Scheduled Task Created (4698) -->
   <rule id="92753" level="12">
-    <if_sid>60103</if_sid>
+    <if_sid>60109</if_sid>
     <field name="win.system.eventID">^4698$</field>
-    <description>Scheduled task created, possible persistence mechanism</description>
+    <description>Scheduled task created: possible persistence mechanism.</description>
     <mitre>
       <id>T1053.005</id>
     </mitre>
-    <group>persistence,scheduled_task</group>
+    <group>persistence,scheduled_task,</group>
   </rule>
 
-  <!-- Phase 3: Registry Run Key Modified -->
+  <!-- Phase 3: Registry Run Key Modified (Sysmon EID 13) -->
   <rule id="92754" level="12">
     <if_sid>61650</if_sid>
-    <field name="win.eventdata.targetObject" type="pcre2">(?i)CurrentVersion\\\\(Run|RunOnce)</field>
-    <description>Registry Run key modified, possible persistence mechanism</description>
+    <field name="win.eventdata.targetObject" type="pcre2">(?i)\\CurrentVersion\\(Run|RunOnce|RunServices|RunServicesOnce)\\</field>
+    <description>Registry Run key modified: possible autostart persistence.</description>
     <mitre>
       <id>T1547.001</id>
     </mitre>
-    <group>persistence,registry</group>
+    <group>persistence,registry,</group>
   </rule>
 
-  <!-- Phase 4: Kerberoasting -->
-  <!-- Key indicator: TGS request using RC4 encryption (0x17) which attackers prefer for offline cracking -->
+  <!-- =========================================================== -->
+  <!-- Phase 4: Kerberoasting (4769, RC4 0x17)                     -->
+  <!-- Value zero-pad tolerant: matches 0x17 and 0x00000017.       -->
+  <!-- This is the fix for the "field/value mismatch" logged in    -->
+  <!-- the detection report (rule was previously silent).          -->
+  <!-- =========================================================== -->
   <rule id="92755" level="14">
-    <if_sid>60103</if_sid>
+    <if_sid>60109</if_sid>
     <field name="win.system.eventID">^4769$</field>
-    <field name="win.eventdata.ticketEncryptionType">0x17</field>
-    <description>Kerberoasting likely: TGS requested with RC4 encryption for a service account</description>
+    <field name="win.eventdata.ticketEncryptionType" type="pcre2">(?i)^0x0*17$</field>
+    <description>Kerberoasting likely: TGS requested with RC4 (0x17) encryption for a service account.</description>
     <mitre>
       <id>T1558.003</id>
     </mitre>
-    <group>credential_access,kerberoasting</group>
+    <group>credential_access,kerberoasting,</group>
   </rule>
 
-  <!-- Phase 4: AS-REP Roasting -->
-  <!-- Key indicator: TGT requested without Kerberos pre-authentication (preAuthType 0) -->
+  <!-- Phase 4: AS-REP Roasting (4768 without pre-auth) -->
+  <!-- Requires Kerberos Auth Service audit subcategory enabled.   -->
   <rule id="92756" level="14">
-    <if_sid>60103</if_sid>
+    <if_sid>60109</if_sid>
     <field name="win.system.eventID">^4768$</field>
-    <field name="win.eventdata.preAuthType">^0$</field>
-    <description>AS-REP Roasting likely: TGT requested without Kerberos pre-authentication</description>
+    <field name="win.eventdata.preAuthType" type="pcre2">^0x0*0$|^0$</field>
+    <description>AS-REP Roasting likely: TGT requested without Kerberos pre-authentication.</description>
     <mitre>
       <id>T1558.004</id>
     </mitre>
-    <group>credential_access,asrep_roast</group>
+    <group>credential_access,asrep_roast,</group>
   </rule>
 
-  <!-- Phase 4: LSASS Memory Access from Unknown Process -->
-  <!-- Key indicators: grantedAccess values 0x1FFFFF, 0x1010, or 0x143A against lsass.exe -->
-  <!-- Paired with rule 92901 to suppress false positives from Windows Defender -->
+  <!-- Phase 4: LSASS Memory Access (Sysmon EID 10) -->
+  <!-- grantedAccess masks substring/zero-pad tolerant.            -->
+  <!-- Paired with suppression 92901 in windows_custom_rules.xml.  -->
   <rule id="92757" level="15">
     <if_sid>61650</if_sid>
     <field name="win.system.eventID">^10$</field>
-    <field name="win.eventdata.targetImage" type="pcre2">(?i)lsass\.exe$</field>
-    <field name="win.eventdata.grantedAccess" type="pcre2">0x1FFFFF|0x1010|0x143A</field>
-    <description>LSASS memory access with suspicious privileges, possible credential dumping</description>
+    <field name="win.eventdata.targetImage" type="pcre2">(?i)\\lsass\.exe$</field>
+    <field name="win.eventdata.grantedAccess" type="pcre2">(?i)0x0*(1FFFFF|1010|143A|1438|1410)$</field>
+    <description>LSASS memory access with credential-dump-grade rights: possible credential dumping.</description>
     <mitre>
       <id>T1003.001</id>
     </mitre>
-    <group>credential_access,lsass_dump</group>
+    <group>credential_access,lsass_dump,</group>
   </rule>
 
-  <!-- Phase 5: Pass the Hash -->
-  <!-- Key indicators: NTLM logon Type 3 with zero key length -->
+  <!-- =========================================================== -->
+  <!-- Phase 5: Pass the Hash (4624 Type 3, NTLM, keyLength 0)     -->
+  <!-- Closes the gap where PtH-to-DC generated 4624 but no        -->
+  <!-- custom rule fired. Machine/anonymous accounts excluded.     -->
+  <!-- =========================================================== -->
   <rule id="92758" level="14">
-    <if_sid>60103</if_sid>
+    <if_sid>60109</if_sid>
     <field name="win.system.eventID">^4624$</field>
     <field name="win.eventdata.logonType">^3$</field>
-    <field name="win.eventdata.authenticationPackageName">NTLM</field>
-    <field name="win.eventdata.keyLength">^0$</field>
-    <description>Pass the Hash suspected: NTLM network logon with zero session key length</description>
+    <field name="win.eventdata.authenticationPackageName" type="pcre2">(?i)NTLM</field>
+    <field name="win.eventdata.keyLength" type="pcre2">^0x0*0$|^0$</field>
+    <field name="win.eventdata.targetUserName" negate="yes" type="pcre2">(?i)\$$|ANONYMOUS</field>
+    <description>Pass-the-Hash suspected: NTLM network logon (Type 3) with zero session-key length by a non-machine account.</description>
     <mitre>
       <id>T1550.002</id>
     </mitre>
-    <group>lateral_movement,pass_the_hash</group>
+    <group>lateral_movement,pass_the_hash,</group>
   </rule>
 
-  <!-- Phase 5: Suspicious Service Installation -->
-  <!-- Covers PsExec-style tools that install a temporary service to execute commands -->
+  <!-- Phase 5: Suspicious Service Installation (7045) -->
   <rule id="92759" level="14">
-    <if_sid>60103</if_sid>
+    <if_sid>60109</if_sid>
     <field name="win.system.eventID">^7045$</field>
-    <description>New service installed, possible lateral movement tool such as PsExec or RemCom</description>
+    <description>New service installed: possible lateral-movement tooling (PsExec/RemCom-style).</description>
     <mitre>
       <id>T1021.002</id>
       <id>T1543.003</id>
     </mitre>
-    <group>lateral_movement,service_install</group>
+    <group>lateral_movement,service_install,</group>
   </rule>
 
-  <!-- Phase 6: DCSync Attack -->
-  <!-- Key indicators: -->
-  <!--   Event 4662 with DS-Replication-Get-Changes GUID in properties -->
-  <!--   Subject account does not end with $ (machine accounts are excluded as legitimate) -->
+  <!-- =========================================================== -->
+  <!-- Phase 6: DCSync (4662 + DS-Replication-Get-Changes GUID)    -->
+  <!-- if_sid corrected to 60109. Non-machine subject only.        -->
+  <!-- Overlaps built-in 110001; the added value is the explicit   -->
+  <!-- machine-account exclusion. Run ONE of the two, not both     -->
+  <!-- firing duplicate alerts. GUIDs: Get-Changes,                -->
+  <!-- Get-Changes-All, Get-Changes-In-Filtered-Set.               -->
+  <!-- =========================================================== -->
   <rule id="92760" level="15">
-    <if_sid>60103</if_sid>
+    <if_sid>60109</if_sid>
     <field name="win.system.eventID">^4662$</field>
-    <field name="win.eventdata.properties" type="pcre2">1131f6aa-9c07-11d1-f79f-00c04fc2dcd2</field>
+    <field name="win.eventdata.properties" type="pcre2">(?i)(1131f6aa-9c07-11d1-f79f-00c04fc2dcd2|1131f6ad-9c07-11d1-f79f-00c04fc2dcd2|89e95b76-444d-4c62-991a-0facbeda640c)</field>
     <field name="win.eventdata.subjectUserName" negate="yes" type="pcre2">\$$</field>
-    <description>DCSync attack detected: non-machine account requested directory replication privileges</description>
+    <description>DCSync detected: non-machine account requested directory replication (Get-Changes / Get-Changes-All) privileges.</description>
     <mitre>
       <id>T1003.006</id>
     </mitre>
-    <group>credential_access,dcsync,critical</group>
+    <group>credential_access,dcsync,critical,</group>
   </rule>
 
-  <!-- Suppression: LSASS False Positive from Windows Defender -->
-  <!-- Overrides rule 92900 (built-in) and rule 92757 (custom above) -->
-  <!-- Prevents alert fatigue from Defender's routine LSASS scanning -->
-  <rule id="92901" level="0">
-    <if_sid>92900</if_sid>
-    <field name="win.eventdata.sourceImage" type="pcre2">(?i)(MsMpEng\.exe|WdFilter\.sys|SenseCncProxy\.exe|MsSense\.exe)</field>
-    <description>LSASS access by Windows Defender or EDR component suppressed as known false positive</description>
+  <!-- =========================================================== -->
+  <!-- NEW 92761: Defender protection disabled (Operational chan)  -->
+  <!-- T1562.001. The LSASS dump was preceded by                   -->
+  <!-- Set-MpPreference -DisableRealtimeMonitoring $true, which    -->
+  <!-- previously had zero detection coverage.                     -->
+  <!-- 62100 = Windows Defender eventchannel base (verify in env). -->
+  <!-- =========================================================== -->
+  <rule id="92761" level="13">
+    <if_sid>62100</if_sid>
+    <field name="win.system.eventID" type="pcre2">^(5001|5010|5012|5101)$</field>
+    <description>Microsoft Defender protection disabled or tampered (real-time/AMSI/IOAV): defense evasion ahead of credential theft.</description>
+    <mitre>
+      <id>T1562.001</id>
+    </mitre>
+    <group>defense_evasion,defender_tamper,</group>
+  </rule>
+
+  <!-- =========================================================== -->
+  <!-- NEW 92762: AMSI bypass pattern via 4104 script block        -->
+  <!-- Higher-confidence AMSI-specific companion to 92752.         -->
+  <!-- =========================================================== -->
+  <rule id="92762" level="13">
+    <if_sid>92100</if_sid>
+    <field name="win.eventdata.scriptBlockText" type="pcre2">(?i)(amsiInitFailed|\[Ref\]\.Assembly\.GetType.*AmsiUtils|AmsiScanBuffer|System\.Management\.Automation\.AmsiUtils)</field>
+    <description>AMSI bypass pattern in PowerShell script block: in-memory defense evasion.</description>
+    <mitre>
+      <id>T1562.001</id>
+      <id>T1059.001</id>
+    </mitre>
+    <group>defense_evasion,amsi_bypass,powershell,</group>
+  </rule>
+
+  <!-- =========================================================== -->
+  <!-- NEW 92763: Forged/Golden ticket REJECTION (4769 failure)    -->
+  <!-- This is what WS2022 actually produced (KDC_ERR_TGT_REVOKED).-->
+  <!-- Detecting the KDC rejection of a forged service-ticket      -->
+  <!-- request is the realistic blue-team signal, not the absence  -->
+  <!-- of events. status 0x1F = TGT revoked; 0x1B/0x29 = PAC.      -->
+  <!-- =========================================================== -->
+  <rule id="92763" level="13">
+    <if_sid>60109</if_sid>
+    <field name="win.system.eventID">^4769$</field>
+    <field name="win.eventdata.status" type="pcre2">(?i)^0x0*(1F|1B|29)$</field>
+    <description>Kerberos service-ticket request rejected for PAC/TGT integrity (status 0x1F/0x1B/0x29): possible forged (Golden/Silver) ticket blocked by KDC validation.</description>
+    <mitre>
+      <id>T1558.001</id>
+    </mitre>
+    <group>credential_access,golden_ticket,kerberos_anomaly,</group>
+  </rule>
+
+  <!-- =========================================================== -->
+  <!-- NEW 92764: Domain password policy weakened (4739)           -->
+  <!-- The lab disabled complexity via secedit/net accounts;       -->
+  <!-- in production this is a high-signal tamper event.           -->
+  <!-- =========================================================== -->
+  <rule id="92764" level="12">
+    <if_sid>60109</if_sid>
+    <field name="win.system.eventID">^4739$</field>
+    <description>Domain policy changed (4739): password complexity/length or lockout policy may have been weakened.</description>
+    <mitre>
+      <id>T1484.001</id>
+    </mitre>
+    <group>defense_evasion,policy_tamper,</group>
+  </rule>
+
+  <!-- =========================================================== -->
+  <!-- NEW 92765: Account flipped to DONT_REQUIRE_PREAUTH (4738)   -->
+  <!-- Catches creation of the AS-REP-roastable condition,         -->
+  <!-- complementing 92756 which catches the roast itself.         -->
+  <!-- =========================================================== -->
+  <rule id="92765" level="12">
+    <if_sid>60109</if_sid>
+    <field name="win.system.eventID">^4738$</field>
+    <field name="win.eventdata.userAccountControl" type="pcre2">(?i)0x0*400000|Don.?t.?Require.?Preauth|DONT_REQ_PREAUTH</field>
+    <description>Account modified to not require Kerberos pre-authentication: creates an AS-REP roastable target.</description>
+    <mitre>
+      <id>T1558.004</id>
+      <id>T1098</id>
+    </mitre>
+    <group>credential_access,asrep_roast,persistence,</group>
+  </rule>
+
+  <!-- =========================================================== -->
+  <!-- NEW 92766: Privileged group membership change              -->
+  <!-- 4728/4732/4756 to Domain(512)/Schema(518)/Enterprise(519). -->
+  <!-- =========================================================== -->
+  <rule id="92766" level="13">
+    <if_sid>60109</if_sid>
+    <field name="win.system.eventID" type="pcre2">^(4728|4732|4756)$</field>
+    <field name="win.eventdata.targetSid" type="pcre2">-(512|518|519)$</field>
+    <description>Member added to a privileged directory group (Domain/Enterprise/Schema Admins): possible privilege escalation or persistence.</description>
+    <mitre>
+      <id>T1098</id>
+      <id>T1078.002</id>
+    </mitre>
+    <group>privilege_escalation,persistence,sensitive_group,</group>
+  </rule>
+
+  <!-- =========================================================== -->
+  <!-- NEW 92767: Defender tamper via Sysmon registry route       -->
+  <!-- Catches the policy-key write even when the Defender         -->
+  <!-- Operational channel is not forwarded.                       -->
+  <!-- =========================================================== -->
+  <rule id="92767" level="13">
+    <if_sid>61650</if_sid>
+    <field name="win.eventdata.targetObject" type="pcre2">(?i)\\Windows Defender\\(Real-Time Protection|Features|Spynet)\\(DisableRealtimeMonitoring|DisableAntiSpyware|DisableBehaviorMonitoring|DisableIOAVProtection|DisableScriptScanning)$</field>
+    <description>Defender policy key written to disable protection (registry path): defense evasion.</description>
+    <mitre>
+      <id>T1562.001</id>
+    </mitre>
+    <group>defense_evasion,defender_tamper,</group>
   </rule>
 
 </group>

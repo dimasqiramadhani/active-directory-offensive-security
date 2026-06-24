@@ -1,0 +1,22 @@
+title: New Service Installed (Possible PsExec-Style Lateral Movement)
+id: a1b2c3d4-0010-4a10-9010-svc7045install
+status: experimental
+description: Service installation (7045), frequently used by remote-execution tooling that drops a temporary service.
+references:
+  - https://attack.mitre.org/techniques/T1021/002/
+author: laborology (Dimas)
+date: 2026-06-19
+tags:
+  - attack.lateral-movement
+  - attack.t1021.002
+  - attack.t1543.003
+logsource:
+  product: windows
+  service: system
+detection:
+  selection:
+    EventID: 7045
+  condition: selection
+falsepositives:
+  - Legitimate software installs and driver/service deployments
+level: high

@@ -1,0 +1,21 @@
+title: Scheduled Task Created
+id: a1b2c3d4-0004-4a04-9004-task4698create
+status: experimental
+description: Scheduled task creation (4698), a common persistence and execution mechanism.
+references:
+  - https://attack.mitre.org/techniques/T1053/005/
+author: laborology (Dimas)
+date: 2026-06-19
+tags:
+  - attack.persistence
+  - attack.t1053.005
+logsource:
+  product: windows
+  service: security
+detection:
+  selection:
+    EventID: 4698
+  condition: selection
+falsepositives:
+  - Software installers and management agents that register scheduled tasks
+level: medium

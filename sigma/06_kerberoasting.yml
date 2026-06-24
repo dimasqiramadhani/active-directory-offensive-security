@@ -1,0 +1,28 @@
+title: Kerberoasting - TGS Request With RC4 Encryption
+id: a1b2c3d4-0006-4a06-9006-kerb4769rc4
+status: experimental
+description: >
+  Service-ticket request (4769) using RC4 (0x17), the weak cipher attackers prefer for
+  offline cracking. Value matching tolerates zero-padded forms (0x17 and 0x00000017).
+references:
+  - https://attack.mitre.org/techniques/T1558/003/
+author: laborology (Dimas)
+date: 2026-06-19
+tags:
+  - attack.credential-access
+  - attack.t1558.003
+logsource:
+  product: windows
+  service: security
+detection:
+  selection:
+    EventID: 4769
+    TicketEncryptionType:
+      - '0x17'
+      - '0x00000017'
+  filter_machine:
+    ServiceName|endswith: '$'
+  condition: selection and not filter_machine
+falsepositives:
+  - Legacy applications or hosts that still negotiate RC4 for Kerberos
+level: high

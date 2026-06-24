@@ -1,0 +1,35 @@
+title: Suspicious PowerShell - AMSI Bypass / Download Cradle / Encoded Command
+id: a1b2c3d4-0003-4a03-9003-ps4104suspicious
+status: experimental
+description: ScriptBlock (4104) content matching AMSI bypass, reflective load, or download-cradle patterns.
+references:
+  - https://attack.mitre.org/techniques/T1059/001/
+author: laborology (Dimas)
+date: 2026-06-19
+tags:
+  - attack.execution
+  - attack.defense-evasion
+  - attack.t1059.001
+  - attack.t1562.001
+logsource:
+  product: windows
+  category: ps_script
+detection:
+  selection:
+    EventID: 4104
+  keywords:
+    ScriptBlockText|contains:
+      - 'AmsiUtils'
+      - 'amsiInitFailed'
+      - 'Invoke-Mimikatz'
+      - 'DownloadString'
+      - 'DownloadData'
+      - 'FromBase64String'
+      - 'EncodedCommand'
+      - 'Net.WebClient'
+      - 'System.Reflection.Assembly'
+      - 'VirtualProtect'
+  condition: selection and keywords
+falsepositives:
+  - Administrative or packaging scripts that legitimately use reflection or web download
+level: high

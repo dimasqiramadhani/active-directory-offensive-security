@@ -1,0 +1,29 @@
+title: Account Set to Not Require Kerberos Pre-Authentication
+id: a1b2c3d4-0015-4a15-9015-asreptarget4738
+status: experimental
+description: >
+  User account modified (4738) so its userAccountControl carries DONT_REQ_PREAUTH (0x400000),
+  creating an AS-REP roastable target. Complements the AS-REP roast detection itself.
+references:
+  - https://attack.mitre.org/techniques/T1558/004/
+author: laborology (Dimas)
+date: 2026-06-19
+tags:
+  - attack.credential-access
+  - attack.persistence
+  - attack.t1558.004
+  - attack.t1098
+logsource:
+  product: windows
+  service: security
+detection:
+  selection:
+    EventID: 4738
+    UserAccountControl|contains:
+      - '0x400000'
+      - "Don't Require Preauth"
+      - 'DONT_REQ_PREAUTH'
+  condition: selection
+falsepositives:
+  - Rare legitimate interop accounts intentionally configured without pre-auth
+level: medium

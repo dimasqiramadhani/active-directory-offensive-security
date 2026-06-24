@@ -1,0 +1,26 @@
+title: Registry Run Key Modified
+id: a1b2c3d4-0005-4a05-9005-reg13runkey
+status: experimental
+description: Sysmon registry value-set (EID 13) writing to a CurrentVersion Run/RunOnce key.
+references:
+  - https://attack.mitre.org/techniques/T1547/001/
+author: laborology (Dimas)
+date: 2026-06-19
+tags:
+  - attack.persistence
+  - attack.t1547.001
+logsource:
+  product: windows
+  category: registry_set
+detection:
+  selection:
+    EventID: 13
+    TargetObject|contains:
+      - '\CurrentVersion\Run\'
+      - '\CurrentVersion\RunOnce\'
+      - '\CurrentVersion\RunServices\'
+      - '\CurrentVersion\RunServicesOnce\'
+  condition: selection
+falsepositives:
+  - Legitimate application autostart registration during install
+level: medium

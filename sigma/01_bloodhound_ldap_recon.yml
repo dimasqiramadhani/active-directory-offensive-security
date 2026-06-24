@@ -1,0 +1,27 @@
+title: High-Volume Directory Service Access (BloodHound/SharpHound Enumeration)
+id: a1b2c3d4-0001-4a01-9001-recon4662enum
+status: experimental
+description: >
+  Detects a single principal generating a high volume of Directory Service Access
+  events (4662) in a short window, consistent with BloodHound/SharpHound collection.
+  Tune the threshold against a baseline of normal 4662 volume on the specific DC.
+references:
+  - https://attack.mitre.org/techniques/T1087/002/
+author: laborology (Dimas)
+date: 2026-06-19
+tags:
+  - attack.discovery
+  - attack.t1087.002
+  - attack.t1069.002
+logsource:
+  product: windows
+  service: security
+detection:
+  selection:
+    EventID: 4662
+  timeframe: 30s
+  condition: selection | count() by SubjectUserName > 15
+falsepositives:
+  - Legitimate directory-synchronization or identity-governance tooling
+  - Vulnerability scanners performing authenticated AD checks
+level: high

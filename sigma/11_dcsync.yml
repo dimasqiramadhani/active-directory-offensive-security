@@ -1,0 +1,29 @@
+title: DCSync - Directory Replication Requested by Non-Machine Account
+id: a1b2c3d4-0011-4a11-9011-dcsync4662repl
+status: experimental
+description: >
+  4662 carrying a DS-Replication-Get-Changes control-access GUID where the requesting
+  account is not a machine account. Legitimate replication is performed by DCs ($ accounts).
+references:
+  - https://attack.mitre.org/techniques/T1003/006/
+author: laborology (Dimas)
+date: 2026-06-19
+tags:
+  - attack.credential-access
+  - attack.t1003.006
+logsource:
+  product: windows
+  service: security
+detection:
+  selection:
+    EventID: 4662
+    Properties|contains:
+      - '1131f6aa-9c07-11d1-f79f-00c04fc2dcd2'
+      - '1131f6ad-9c07-11d1-f79f-00c04fc2dcd2'
+      - '89e95b76-444d-4c62-991a-0facbeda640c'
+  filter_machine:
+    SubjectUserName|endswith: '$'
+  condition: selection and not filter_machine
+falsepositives:
+  - Azure AD Connect / directory-sync service accounts (whitelist explicitly)
+level: critical

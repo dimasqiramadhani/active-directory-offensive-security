@@ -1,0 +1,35 @@
+title: LSASS Memory Access With Credential-Dump Rights
+id: a1b2c3d4-0008-4a08-9008-lsass10access
+status: experimental
+description: >
+  Sysmon ProcessAccess (EID 10) against lsass.exe with grantedAccess masks associated with
+  credential dumping. Pair with a suppression for Defender components (MsMpEng.exe, etc.).
+references:
+  - https://attack.mitre.org/techniques/T1003/001/
+author: laborology (Dimas)
+date: 2026-06-19
+tags:
+  - attack.credential-access
+  - attack.t1003.001
+logsource:
+  product: windows
+  category: process_access
+detection:
+  selection:
+    EventID: 10
+    TargetImage|endswith: '\lsass.exe'
+    GrantedAccess:
+      - '0x1FFFFF'
+      - '0x1010'
+      - '0x143A'
+      - '0x1438'
+      - '0x1410'
+  filter_defender:
+    SourceImage|endswith:
+      - '\MsMpEng.exe'
+      - '\MsSense.exe'
+      - '\SenseCncProxy.exe'
+  condition: selection and not filter_defender
+falsepositives:
+  - EDR/AV components reading LSASS (handled by the Defender filter; extend for your stack)
+level: critical

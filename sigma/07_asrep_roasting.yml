@@ -1,0 +1,26 @@
+title: AS-REP Roasting - TGT Requested Without Pre-Authentication
+id: a1b2c3d4-0007-4a07-9007-asrep4768nopreauth
+status: experimental
+description: >
+  AS request (4768) for an account that does not require Kerberos pre-authentication.
+  Requires the Kerberos Authentication Service audit subcategory to be enabled on the DC.
+references:
+  - https://attack.mitre.org/techniques/T1558/004/
+author: laborology (Dimas)
+date: 2026-06-19
+tags:
+  - attack.credential-access
+  - attack.t1558.004
+logsource:
+  product: windows
+  service: security
+detection:
+  selection:
+    EventID: 4768
+    PreAuthType:
+      - '0'
+      - '0x0'
+  condition: selection
+falsepositives:
+  - Rare legitimate accounts intentionally configured without pre-auth
+level: high

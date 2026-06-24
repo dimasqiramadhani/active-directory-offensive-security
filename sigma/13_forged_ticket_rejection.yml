@@ -1,0 +1,29 @@
+title: Forged Kerberos Ticket Rejected (Golden/Silver Ticket Blocked by KDC)
+id: a1b2c3d4-0013-4a13-9013-forgedticket4769fail
+status: experimental
+description: >
+  Service-ticket request (4769) rejected for PAC/TGT integrity (status 0x1F revoked, 0x1B,
+  or 0x29). On modern Windows Server, file-based forged tickets are rejected at the KDC and
+  the rejection itself is the observable signal - not the absence of events.
+references:
+  - https://attack.mitre.org/techniques/T1558/001/
+author: laborology (Dimas)
+date: 2026-06-19
+tags:
+  - attack.credential-access
+  - attack.t1558.001
+logsource:
+  product: windows
+  service: security
+detection:
+  selection:
+    EventID: 4769
+    Status:
+      - '0x1F'
+      - '0x0000001F'
+      - '0x1B'
+      - '0x29'
+  condition: selection
+falsepositives:
+  - Clock skew or genuinely expired tickets can produce integrity/revocation statuses
+level: high

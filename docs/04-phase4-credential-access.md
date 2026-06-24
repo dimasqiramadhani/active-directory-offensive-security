@@ -182,12 +182,12 @@ Credentials extracted:
 ```
 LogonSession: Administrator
   Domain: LAB
-  NT:   bf27edd1b8509ea3e5a081fe7b90564d
-  SHA1: fca01b4f49dc61bb032f52f5aece4e1ffdb0c6b5
-  AES256: a10b12f91b2d5d2fd617eaac4c9b47f68cc41c009315d6c6815107efaa66f705
+  NT:   bf27edd1…[REDACTED-NTLM]
+  SHA1: fca01b4f…[REDACTED-HASH]
+  AES256: a10b12f9…[REDACTED-HASH]
 
 LogonSession: WIN-AGENT-02$
-  NT: 5628c6acbf07b35d87f2d4a3ebbca38a
+  NT: 5628c6ac…[REDACTED-HASH]
 ```
 
 pypykatz also reported an ssp_exception for the SSP template (architecture KatzSystemArchitecture.X64, build 20348 not recognized). This did not affect the MSV credential extraction which is where the NTLM hash lives.
@@ -199,7 +199,7 @@ pypykatz also reported an ssp_exception for the SSP template (architecture KatzS
 | john.doe | Password Spray | Winter2024! |
 | svc-backup | Kerberoasting, two rounds | password123 |
 | svc-legacy | AS-REP Roasting | password123 |
-| Administrator | LSASS Dump on win-agent-02 | NTLM bf27edd1b8509ea3e5a081fe7b90564d |
+| Administrator | LSASS Dump on win-agent-02 | NTLM bf27edd1…[REDACTED-NTLM] |
 
 ## Wazuh Detection
 

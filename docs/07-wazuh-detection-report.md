@@ -59,9 +59,14 @@ flowchart LR
 
 ## Detection Coverage Chart
 
+Positions reflect the **v2** rule pack. The session baseline (v1) had most techniques in the
+lower band; after the anchor/value fixes and new rules, detection moves up. Two techniques
+stay mid-height because they depend on a prerequisite (audit subcategory / threshold tuning)
+rather than rule quality.
+
 ```mermaid
 quadrantChart
-    title Detection Coverage vs Attack Severity
+    title Detection Coverage vs Attack Severity (v2)
     x-axis Low Severity --> High Severity
     y-axis Not Detected --> Fully Detected
     quadrant-1 Critical Blind Spots
@@ -69,17 +74,28 @@ quadrantChart
     quadrant-3 Low Priority
     quadrant-4 Monitored
     DCSync: [0.9, 0.95]
-    LSASS Dump: [0.85, 0.35]
-    Password Spray: [0.5, 0.75]
-    Registry Persistence: [0.4, 0.4]
-    Lateral Movement WinRM: [0.6, 0.55]
-    Kerberoasting: [0.8, 0.35]
-    AS-REP Roasting: [0.75, 0.05]
-    Golden Ticket: [0.95, 0.0]
-    Reconnaissance: [0.3, 0.25]
+    LSASS Dump: [0.85, 0.8]
+    Defender Disable: [0.7, 0.82]
+    Password Spray: [0.5, 0.8]
+    Registry Persistence: [0.4, 0.7]
+    Pass-the-Hash: [0.6, 0.78]
+    Kerberoasting: [0.8, 0.82]
+    AS-REP Roasting: [0.75, 0.45]
+    Golden Ticket: [0.95, 0.6]
+    Reconnaissance: [0.3, 0.5]
 ```
 
-Note: LSASS Dump is shown lower than expected because although rule 92900 fired, all alerts during the session were Defender false positives, not the actual dump event.
+Notes on v2 positions:
+- **LSASS Dump** moved up: rule `92757` matches the dump access masks and `92901` suppresses
+  the Defender false positives that previously masked it.
+- **Kerberoasting** moved up: the RC4 value match (`0x17`/`0x00000017`) now fires `92755`.
+- **Golden Ticket** moved from the floor to mid-high: the WS2022 rejection emits 4769 status
+  `0x1F`, caught by `92763`. It is not at the top because a fully-validating in-memory ticket
+  still needs a directory-membership lookup to flag.
+- **AS-REP Roasting** stays mid: the rule is correct but only fires once the Kerberos
+  Authentication Service audit subcategory is enabled on the DC.
+- **Reconnaissance** stays mid: volume rule `92750` works but needs threshold tuning to a
+  per-DC baseline to avoid false positives.
 
 ## Phase by Phase
 
@@ -247,45 +263,63 @@ GET wazuh-alerts-*/_search
 
 The suppression works. However, the original actual dump event from rundll32 was not definitively confirmed in the alert data separately from the Defender noise that preceded it.
 
-## Detection Gaps and Root Causes
+## Detection Gaps and Root Causes — v2 Resolution
+
+Each v1 gap is shown with its root cause and the v2 resolution. Green = resolved by a
+deployed rule; amber = rule deployed but needs an environment prerequisite to fire.
 
 ```mermaid
 flowchart TD
-    GAP1["AS-REP Roasting: zero events"] --> RC1["Kerberos Authentication Service
-    audit subcategory not enabled on DC"]
-    RC1 --> FIX1["auditpol set Kerberos Authentication Service
-    success enable failure enable"]
+    GAP1["v1 GAP: AS-REP Roasting
+    zero events"] --> RC1["Root cause: Kerberos Authentication
+    Service audit subcategory not enabled"]
+    RC1 --> FIX1["v2: rule 92756 deployed +
+    enable-audit-policy.ps1 enables the
+    subcategory. AMBER: fires once audit on."]
 
-    GAP2["Kerberoasting: event ingested
-    but rule not firing"] --> RC2["Custom rule 92755 references field
-    ticketEncryptionType but the actual
-    field name in this Wazuh version differs"]
-    RC2 --> FIX2["Query a real 4769 event in OpenSearch
-    check data.win.eventdata fields
-    update rule 92755 to match actual field name"]
+    GAP2["v1 GAP: Kerberoasting
+    event ingested, rule silent"] --> RC2["Root cause: exact-string value match
+    on ticketEncryptionType failed on
+    zero-padded form (0x00000017)"]
+    RC2 --> FIX2["v2 RESOLVED: rule 92755 uses pcre2
+    ^0x0*17$ so 0x17 and 0x00000017
+    both match"]
 
-    GAP3["Password spray level 5
-    not actionable"] --> RC3["Rule 60122 is a generic logon failure rule
-    No frequency correlation exists for spray pattern"]
-    RC3 --> FIX3["Deploy custom rule 92751
-    frequency 5 same IP different users
-    in 60 second window"]
+    GAP3["v1 GAP: Password spray
+    level 5 not actionable"] --> RC3["Root cause: 60122 is a generic
+    logon-failure rule, no correlation"]
+    RC3 --> FIX3["v2 RESOLVED: rule 92751 correlates
+    5 failures, same IP, different users,
+    in 60s"]
 
-    GAP4["Golden Ticket: not detectable
-    in current configuration"] --> RC4["File-based ccache rejected by WS2022
-    before authentication completes
-    No events generated for rejected tickets"]
-    RC4 --> FIX4["Monitor 4769 for usernames that do not
-    exist in the directory
-    Monitor for ticket lifetimes over 10 hours"]
+    GAP4["v1 GAP: Golden Ticket
+    not detectable"] --> RC4["Root cause: WS2022 rejects file-based
+    forged tickets at the KDC; v1 looked
+    for the wrong signal"]
+    RC4 --> FIX4["v2 RESOLVED (rejection path): rule 92763
+    catches 4769 status 0x1F/0x1B/0x29.
+    Validating-ticket case = documented follow-up"]
 
-    GAP5["LSASS actual dump
-    not confirmed distinct from FP"] --> RC5["Rule 92900 fired 16 times daily
-    all from Defender before rule 92901 was deployed
-    Actual rundll32 dump window unclear"]
-    RC5 --> FIX5["Rule 92901 now suppresses Defender FP
-    Future dumps from unknown processes
-    will generate clean alerts"]
+    GAP5["v1 GAP: LSASS dump not
+    distinct from Defender FP"] --> RC5["Root cause: 92900 fired 16x from
+    MsMpEng.exe, masking the real dump"]
+    RC5 --> FIX5["v2 RESOLVED: 92757 matches dump access
+    masks; 92901 suppresses Defender so real
+    dumps alert cleanly"]
+
+    GAP6["v1 GAP: Pass-the-Hash, Defender
+    disable, policy downgrade = no rule"] --> RC6["Root cause: techniques executed but
+    never modeled; PtH rule mis-anchored"]
+    RC6 --> FIX6["v2 RESOLVED: 92758 (PtH, anchor fixed),
+    92761/92767 (Defender tamper),
+    92764 (policy), 92765/92766 (AS-REP target, priv group)"]
+
+    style FIX2 fill:#27ae60,color:#fff
+    style FIX3 fill:#27ae60,color:#fff
+    style FIX4 fill:#27ae60,color:#fff
+    style FIX5 fill:#27ae60,color:#fff
+    style FIX6 fill:#27ae60,color:#fff
+    style FIX1 fill:#f39c12,color:#fff
 ```
 
 ## Useful Queries for Follow-up

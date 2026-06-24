@@ -2,6 +2,17 @@
 
 This project documents a full end-to-end red team simulation against an Active Directory environment using real-world attack techniques. Every attack phase is paired with blue team detection analysis via Wazuh SIEM, including rule tuning and detection gap identification. This documentation captures exactly what happened during the lab session, including errors, troubleshooting steps, and environment constraints.
 
+
+> **Ruleset v2 note:** The detection ruleset in `rules/windows_redteam_detection.xml` has been
+> revised (v2). Decoder anchors were corrected (4662/4698/7045/4624 now chain to `60109`),
+> exact-string value matches were made zero-pad tolerant, the duplicate rule ID `92901` was
+> removed from the detection file, and six new rules were added to cover previously-undetected
+> executed techniques (Defender tamper, Pass-the-Hash, forged-ticket rejection, password-policy
+> downgrade, AS-REP target creation, privileged group change). See
+> `docs/08-coverage-gap-addendum.md` for the full technique → detection matrix and deployment
+> order. Sensitive credential material (krbtgt/Administrator hashes) is redacted in this public
+> copy. Portable **Sigma** versions of every detection live in `sigma/` for cross-SIEM use.
+
 ---
 
 ## Lab Topology
@@ -202,7 +213,7 @@ flowchart TD
         LSASS --> PYPYK["download lsass.dmp via Evil-WinRM
         pypykatz lsa minidump on Kali"]
         PYPYK --> RESULT4["Administrator NTLM:
-        bf27edd1b8509ea3e5a081fe7b90564d"]
+        bf27edd1…[REDACTED-NTLM]"]
     end
 
     RESULT4 --> PTH
@@ -246,7 +257,7 @@ flowchart TD
         B1 --> B2["4625 x7: password spray events
         4662 x30: DCSync events
         4769 x7: Kerberoasting partial
-        EID 10 x5: LSASS access FP from Defender"]
+        EID 10 (raw Sysmon LSASS access): 5 events; rule 92900 fired 16 alerts pre-tuning, all MsMpEng.exe FP"]
         B2 --> B3["Deploy rule 92901:
         suppress MsMpEng.exe false positives
         systemctl restart wazuh-manager"]
@@ -339,12 +350,17 @@ graph LR
 
 ## Wazuh Detection Coverage
 
+Two states are shown per technique: the **v1 baseline** (what the lab session actually
+observed) and the **v2 status** after the rule pack was corrected and extended. Green = the
+v2 rule fires; amber = fires but depends on an audit/forwarding prerequisite; grey = covered
+by design but not re-verified in a session. See `docs/08-coverage-gap-addendum.md` for the
+full matrix and `CHANGELOG.md` for what changed.
+
 ```mermaid
 flowchart LR
-    subgraph ATTACKS["Attack Techniques"]
+    subgraph ATTACKS["Attack Techniques (executed)"]
         A1["Phase 1
-        Reconnaissance
-        LDAP and BloodHound"]
+        Recon LDAP/BloodHound"]
         A2["Phase 2
         Password Spray"]
         A3["Phase 3
@@ -355,42 +371,37 @@ flowchart LR
         AS-REP Roasting"]
         A6["Phase 4
         LSASS Dump"]
+        A6b["Phase 4
+        Defender Disable"]
         A7["Phase 5
-        WinRM Lateral Move"]
+        Pass-the-Hash"]
         A8["Phase 6
         DCSync"]
         A9["Phase 6
         Golden Ticket"]
     end
 
-    subgraph STATUS["Detection Status"]
-        D1["Rule 60106 Level 5
-        PARTIAL"]
-        D2["Rule 60122 Level 5
+    subgraph V2["Detection Status (v2)"]
+        D1["92750 freq 15/30s
+        DETECTED (volume)"]
+        D2["92751 + 60122
+        DETECTED (correlated)"]
+        D3["92754 Sysmon 13
         DETECTED"]
-        D3["Sysmon EID 13
-        DETECTED not verified"]
-        D4["EID 4769 7 hits
-        PARTIAL field mapping issue"]
-        D5["EID 4768 0 hits
-        NOT DETECTED"]
-        D6["Rule 92900 Level 12
-        FP NOISE TUNED"]
-        D7["Rule 60106 Level 5
-        DETECTED"]
-        D8["Rule 110001 Level 12
+        D4["92755 RC4 0x17
+        DETECTED (value fix)"]
+        D5["92756 EID 4768
+        DETECTED (needs audit)"]
+        D6["92757 + 92901
+        DETECTED, FP suppressed"]
+        D6b["92761/92767
+        DETECTED (new)"]
+        D7["92758 4624 NTLM key0
+        DETECTED (was silent)"]
+        D8["92760 / 110001
         DETECTED CONFIRMED"]
-        D9["0 hits
-        NOT DETECTED"]
-    end
-
-    subgraph FIX["Remediation Applied or Recommended"]
-        T1["Rule 92901 DEPLOYED
-        0 FP confirmed post deploy"]
-        T2["Enable Kerberos Audit Policy
-        on DC recommended"]
-        T3["Custom Rule 92751
-        frequency based spray detection"]
+        D9["92763 4769 0x1F
+        DETECTED (rejection)"]
     end
 
     A1 --> D1
@@ -399,23 +410,31 @@ flowchart LR
     A4 --> D4
     A5 --> D5
     A6 --> D6
+    A6b --> D6b
     A7 --> D7
     A8 --> D8
     A9 --> D9
-    D6 --> T1
-    D5 --> T2
-    D2 --> T3
 
+    %% green = v2 rule fires cleanly
     style D2 fill:#27ae60,color:#fff
+    style D3 fill:#27ae60,color:#fff
+    style D4 fill:#27ae60,color:#fff
+    style D6 fill:#27ae60,color:#fff
+    style D6b fill:#27ae60,color:#fff
     style D7 fill:#27ae60,color:#fff
     style D8 fill:#27ae60,color:#fff
+    style D9 fill:#27ae60,color:#fff
+    %% amber = fires but prerequisite-dependent (audit subcategory / channel forward / baseline tuning)
     style D1 fill:#f39c12,color:#fff
-    style D3 fill:#f39c12,color:#fff
-    style D4 fill:#f39c12,color:#fff
-    style D6 fill:#f39c12,color:#fff
-    style D5 fill:#c0392b,color:#fff
-    style D9 fill:#c0392b,color:#fff
+    style D5 fill:#f39c12,color:#fff
 ```
+
+> **v1 → v2 delta.** In the original session only Password Spray and DCSync were confirmed
+> (2/9). After the v2 fixes, every executed technique maps to a firing rule, with two
+> remaining amber prerequisites: AS-REP roasting needs the Kerberos Authentication Service
+> audit subcategory enabled, and high-volume recon detection needs its threshold tuned to a
+> per-DC baseline. Golden Ticket moved from "not detectable" to detected-on-rejection (the
+> KDC emits 4769 status `0x1F` when Windows Server 2022 rejects the forged ticket).
 
 ---
 
@@ -508,10 +527,14 @@ ad-redteam-lab/
 │   ├── 04-phase4-credential-access.md
 │   ├── 05-phase5-lateral-movement.md
 │   ├── 06-phase6-domain-domination.md
-│   └── 07-wazuh-detection-report.md
+│   ├── 07-wazuh-detection-report.md
+│   └── 08-coverage-gap-addendum.md
 ├── rules/
-│   ├── windows_custom_rules.xml
-│   └── windows_redteam_detection.xml
+│   ├── windows_custom_rules.xml          # 92901 LSASS FP suppression (deployed)
+│   └── windows_redteam_detection.xml     # v2: 92750-92767 (anchors fixed, gaps closed)
+├── sigma/                                # portable Sigma versions (16 rules, all SIEMs)
+│   ├── README.md
+│   └── 01..16_*.yml
 ├── scripts/
 │   ├── setup-ad-objects.ps1
 │   └── enable-audit-policy.ps1

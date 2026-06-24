@@ -1,0 +1,9 @@
+# Lab artifacts that must never be committed
+*.dmp
+*.ccache
+*.kirbi
+*.hash
+*.ntds
+*secrets*.txt
+*.ovpn
+loot/

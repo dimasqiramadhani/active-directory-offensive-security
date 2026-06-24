@@ -1,0 +1,30 @@
+title: Member Added to Privileged Directory Group (Domain/Enterprise/Schema Admins)
+id: a1b2c3d4-0016-4a16-9016-privgroup4732add
+status: experimental
+description: Member added (4728/4732/4756) to a group whose SID ends in 512, 518, or 519.
+references:
+  - https://attack.mitre.org/techniques/T1098/
+author: laborology (Dimas)
+date: 2026-06-19
+tags:
+  - attack.persistence
+  - attack.privilege-escalation
+  - attack.t1098
+  - attack.t1078.002
+logsource:
+  product: windows
+  service: security
+detection:
+  selection:
+    EventID:
+      - 4728
+      - 4732
+      - 4756
+    TargetSid|endswith:
+      - '-512'
+      - '-518'
+      - '-519'
+  condition: selection
+falsepositives:
+  - Sanctioned administrative onboarding (correlate with change management)
+level: high
