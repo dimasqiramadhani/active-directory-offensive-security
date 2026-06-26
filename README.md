@@ -476,7 +476,7 @@ SMB port 445 and RPC port 135 are filtered on both agents. This rules out PsExec
 | Phase 6 | Golden Ticket | T1558.001 | ticketer AES256 | Forged but blocked by KDC_ERR_TGT_REVOKED |
 | Phase 6 | DA Shell | N/A | evil-winrm PtH | lab\\administrator on windows-ad-dc confirmed |
 | Blue Team | Detection Review | N/A | OpenSearch Dev Tools | 4 confirmed 2 partial 3 gaps identified |
-| Blue Team | Rule Tuning | N/A | Wazuh manager rules | Rule 92901 deployed, 0 FP verified |
+| Blue Team | Rule Tuning | N/A | Wazuh manager rules | Rule 92901 present since June 19 but not loaded until manager restart (see CHANGELOG v2.1) |
 
 ---
 
@@ -484,11 +484,50 @@ SMB port 445 and RPC port 135 are filtered on both agents. This rules out PsExec
 
 | Phase | Rule ID | Event ID | Level | Status | Evidence |
 |---|---|---|---|---|---|
-| Phase 2 | 60122 | 4625 | 5 | DETECTED | 7 events from 192.168.24.2 |
-| Phase 4 | 92900 | EID 10 | 12 | FP TUNED | 16 FP before, 0 after rule 92901 |
-| Phase 4 | N/A | 4769 | N/A | PARTIAL | 7 hits but encryption field mapping differs |
+| Phase 2 | 60122 | 4625 | 5 | DETECTED | 26 failed logons, 17 usernames from 192.168.24.2/.6 (re-validated) |
+| Phase 4 | 92900 | EID 10 | 12 | FP IDENTIFIED | 53 MsMpEng FP over 6 days; 92901 suppression confirmed loaded only after manager restart |
+| Phase 4 | N/A | 4769 | N/A | PARTIAL | svc-backup not isolated; all observed 4769 was normal 0x12 (AES) traffic |
 | Phase 4 | N/A | 4768 | N/A | NOT DETECTED | 0 hits due to audit policy gap |
-| Phase 6 | 110001 | 4662 | 12 | DETECTED | 20 events mail true confirmed |
+| Phase 6 | 110001 | 4662 | 12 | DETECTED | 57 events, level 12, mail true (re-validated) |
+
+---
+
+## Screenshots / Evidence
+
+> All credential material (NTLM/AES/Kerberos keys, machine-account secrets, bootkeys) is
+> redacted in these images. Lab identifiers (SIDs, internal IPs, hostnames) are left intact
+> for context.
+
+### Red Team
+
+**Password spray → initial foothold (Phase 2/3)**
+![Password spray and Evil-WinRM](screenshots/Kali%20Attack%20-%20password-spray%20and%20evilwinrm.png)
+
+**Kerberoasting hash request (Phase 4)**
+![Kerberoasting](screenshots/Kali%20Attack%20-%20kerberoasting-hash.png)
+
+**Hashcat crack — svc-backup (Phase 4)**
+![Hashcat cracked](screenshots/Kali%20Attack%20-%20hashcat-cracked.png)
+
+**LSASS minidump via comsvcs.dll (Phase 4)**
+![LSASS dump](screenshots/Kali%20Attack%20-%20lsass-dump.png)
+
+**pypykatz — Administrator NTLM harvested (Phase 4)**
+![pypykatz NTLM](screenshots/Kali%20Attack%20-%20pypykatz-ntlm.png)
+
+**Pass-the-Hash + DCSync (Phase 5/6)**
+![PtH and DCSync](screenshots/Kali%20Attack%20-%20pth-pwned%20and%20dcsync.png)
+
+**Domain Admin shell on the DC (Phase 6)**
+![DA shell](screenshots/Kali%20Attack%20-%20da-shell.png)
+
+### Blue Team (Wazuh)
+
+**DCSync detection — rule 110001, level 12 (event 4662)**
+![DCSync detection](screenshots/Wazuh%20-%20dcsync%20rule%20110001.png)
+
+**Password spray detection — rule 60122 (event 4625)**
+![Spray detection](screenshots/Wazuh%20-%20password-spray%20rule%2060122%20-%20event%204625.png)
 
 ---
 
@@ -511,6 +550,7 @@ Everything that went wrong during this session, in rough order of occurrence.
 | Golden Ticket attempt 2 failed | AES256 ticket still KDC_ERR_TGT_REVOKED | Tried disabling PAC validation on DC |
 | PAC validation disable did not help | WS2022 enforces multiple validation layers | Golden Ticket abandoned, used Pass the Hash instead |
 | windows_custom_rules.xml broke Wazuh manager | Rule element not wrapped in group tag | Added group wrapper, restarted successfully |
+| Suppression rule 92901 had no effect | Rule on disk since June 19 but manager ran 6 days without restart, so it was never loaded into memory | `systemctl restart wazuh-manager`; verified `etc/rules` is registered in `ossec.conf` and rule loads on boot |
 
 ---
 
@@ -558,7 +598,7 @@ Lab Management: Proxmox VE on remote hypervisors, OpenVPN
 
 1. DCSync was the clearest detection. Rule 110001 fired at level 12 with mail alert, generating 20 events when secretsdump ran. This is one of the strongest built-in detection rules in the lab.
 2. Golden Ticket failed completely despite three attempts. NTLM-based forge, AES256-based forge with extra SIDs, and disabling PAC validation on the DC via registry all produced KDC_ERR_TGT_REVOKED. Windows Server 2022 rejects file-based ccache tickets through multiple layers. In a real engagement this would require Mimikatz executing in memory on a domain-joined machine.
-3. LSASS false positives masked the actual dump. Rule 92900 was firing 16 times daily from MsMpEng.exe before rule 92901 was deployed. The actual rundll32 dump event was not definitively confirmed distinct from that noise during the session.
+3. LSASS false positives masked the actual dump. Rule 92900 fired 53 times from MsMpEng.exe over six days. The suppression rule 92901 existed on disk but was not actually active: the manager had run six days without a restart, so the rule was never loaded into memory. This means the earlier "0 FP verified" claim was not accurate. After restarting the manager the rule loads correctly. A clean before/after of a single suppressed event still depends on Defender naturally re-scanning LSASS (real-time protection had also been disabled on the agent during Phase 4, which independently reduced the FP volume). See CHANGELOG v2.1.
 4. AS-REP Roasting produced zero events. The Kerberos Authentication Service audit subcategory was not enabled on the DC, so event 4768 was never generated. The attack succeeded technically but left no trace in Wazuh.
 5. Kerberoasting was visible but not actionable. Seven 4769 events were ingested but custom rule 92755 did not fire because the field name for ticketEncryptionType differs in this Wazuh version.
 6. crackmapexec could not be installed. The required dependency python3-terminaltables3 version 4.0.0-7 was missing from the Kali repo. The entire password spray phase depended on first switching to netexec.

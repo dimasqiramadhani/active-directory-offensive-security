@@ -1,5 +1,45 @@
 # Changelog
 
+## v2.1 — Live re-validation (June 25, 2026)
+
+A second live run was performed to re-capture evidence and verify the v2 claims against the
+running cluster. Several v1/v2 statements did not survive contact with the live system and are
+corrected here. This section is kept deliberately honest — the corrections are part of the
+engineering record.
+
+### Confirmed live
+- **DCSync (`110001`, event 4662).** Fired at level 12 with mail alert, 57 events on
+  `windows-ad-dc` during `secretsdump`. Strongest, cleanest detection in the lab.
+- **Password spray (`60122`, event 4625).** 26 failed logons across 17 distinct usernames
+  from the attacker tun0 addresses (`192.168.24.2`, `192.168.24.6`) — textbook spray
+  signature. High-value names (`krbtgt`, `administrator`, `guest`) appear in the attempt set.
+
+### Corrected
+- **LSASS suppression `92901` was NOT live, despite the file being present since June 19.**
+  Root cause: `wazuh-manager` had been running for 6 days without a restart, so the rule on
+  disk had never been loaded into memory. The v1 claim "LSASS FP suppression 92901, 0 FP
+  verified" was therefore not actually verified. After `systemctl restart wazuh-manager`
+  the rule loads and no new `92900` alerts appear post-restart.
+- **`ossec.conf` ruleset path was fine.** `etc/rules` and `etc/decoders` are correctly
+  registered under the user-defined ruleset block — the suppression failure was the missing
+  restart, not a missing `rule_dir`.
+- **Part of the observed FP drop was an artifact of the attack, not the rule.** Windows
+  Defender real-time monitoring had been disabled on the agent during Phase 4
+  (`Set-MpPreference -DisableRealtimeMonitoring $true`), which independently stopped MsMpEng
+  from touching LSASS. A fully clean before/after of an individual suppressed event still
+  awaits the next natural Defender LSASS scan cycle and is listed as a residual gap.
+- **Kerberoasting (`4769`) remains not cleanly detectable in this dataset.** A targeted query
+  for `serviceName: svc-backup` returned 0 hits; all observed 4769 traffic was normal domain
+  service-ticket activity with encryption `0x12` (AES256), not the `0x17` (RC4) roast
+  signature. The "visible but not actionable" status from v1 stands.
+
+### Note
+The 6-day-uptime / unloaded-rule finding is itself a useful operational lesson: a custom rule
+that exists on disk and even passes review is not "deployed" until the manager has reloaded
+it. Treat rule deployment as file change **plus** verified reload, not file change alone.
+
+---
+
 ## v2 — Detection hardening and coverage closure
 
 ### Fixed
