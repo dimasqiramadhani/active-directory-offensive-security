@@ -31,31 +31,31 @@ flowchart LR
 
 ## What Was Attempted vs What Actually Happened
 
-| Technique | Attempted | Result | Detected |
-|---|---|---|---|
-| Nmap recon | Yes | Completed | Partial via logon events |
-| ldapdomaindump | Yes, failed first time | Succeeded after AD setup | Not verified |
-| bloodhound-python | Yes, Kerberos failed, NTLM fallback | Completed | Not verified |
-| crackmapexec | Yes | Installation failed completely | N/A |
-| netexec password spray | Yes | Succeeded, john.doe found | Detected rule 60122 level 5 |
-| Evil-WinRM Phase 3 | Yes, failed twice | Succeeded third time | Logon event only |
-| Scheduled task persistence | Yes, two attempts | Both failed, access denied | No event generated |
-| Registry Run Key | Yes | Succeeded | Sysmon EID 13, not checked in dashboard |
-| AMSI bypass | Yes | Succeeded | Not verified |
-| Kerberoasting | Yes | Hash obtained, first crack exhausted, second cracked | Partial, EID 4769 ingested but rule not firing |
-| AS-REP Roasting | Yes | Hash obtained, cracked | Not detected at all, audit policy missing |
-| LSASS dump | Yes | Succeeded after Defender disabled | Rule 92900 fired but all FP from Defender |
-| Lateral to win-agent-02 | Yes | Succeeded via WinRM | Logon event |
-| PsExec to agents | Yes | Failed, SMB filtered | N/A |
-| WMIExec to agents | Yes | Failed, SMB filtered | N/A |
-| Pass the Hash to DC | Yes | Succeeded, Pwn3d | EID 4624 NTLM, no custom rule deployed |
-| DCSync | Yes | Succeeded | Confirmed, rule 110001 level 12 |
-| Golden Ticket NTLM | Yes | Failed, KDC_ERR_TGT_REVOKED | N/A |
-| Golden Ticket AES256 | Yes | Failed, same error | N/A |
-| PAC validation disable | Yes | Did not help | N/A |
-| Golden Ticket with all fixes | Yes | Still failed | N/A |
-| Rule 92901 deployment | Yes | Succeeded on second try | Verified 0 FP |
-| Wazuh manager restart | Yes, failed first | Succeeded after XML fix | N/A |
+| Technique                    | Attempted                           | Result                                               | Detected                                       |
+|------------------------------|-------------------------------------|------------------------------------------------------|------------------------------------------------|
+| Nmap recon                   | Yes                                 | Completed                                            | Partial via logon events                       |
+| ldapdomaindump               | Yes, failed first time              | Succeeded after AD setup                             | Not verified                                   |
+| bloodhound-python            | Yes, Kerberos failed, NTLM fallback | Completed                                            | Not verified                                   |
+| crackmapexec                 | Yes                                 | Installation failed completely                       | N/A                                            |
+| netexec password spray       | Yes                                 | Succeeded, john.doe found                            | Detected rule 60122 level 5                    |
+| Evil-WinRM Phase 3           | Yes, failed twice                   | Succeeded third time                                 | Logon event only                               |
+| Scheduled task persistence   | Yes, two attempts                   | Both failed, access denied                           | No event generated                             |
+| Registry Run Key             | Yes                                 | Succeeded                                            | Sysmon EID 13, not checked in dashboard        |
+| AMSI bypass                  | Yes                                 | Succeeded                                            | Not verified                                   |
+| Kerberoasting                | Yes                                 | Hash obtained, first crack exhausted, second cracked | Partial, EID 4769 ingested but rule not firing |
+| AS-REP Roasting              | Yes                                 | Hash obtained, cracked                               | Not detected at all, audit policy missing      |
+| LSASS dump                   | Yes                                 | Succeeded after Defender disabled                    | Rule 92900 fired but all FP from Defender      |
+| Lateral to win-agent-02      | Yes                                 | Succeeded via WinRM                                  | Logon event                                    |
+| PsExec to agents             | Yes                                 | Failed, SMB filtered                                 | N/A                                            |
+| WMIExec to agents            | Yes                                 | Failed, SMB filtered                                 | N/A                                            |
+| Pass the Hash to DC          | Yes                                 | Succeeded, Pwn3d                                     | EID 4624 NTLM, no custom rule deployed         |
+| DCSync                       | Yes                                 | Succeeded                                            | Confirmed, rule 110001 level 12                |
+| Golden Ticket NTLM           | Yes                                 | Failed, KDC_ERR_TGT_REVOKED                          | N/A                                            |  
+| Golden Ticket AES256         | Yes                                 | Failed, same error                                   | N/A                                            |
+| PAC validation disable       | Yes                                 | Did not help                                         | N/A                                            |
+| Golden Ticket with all fixes | Yes                                 | Still failed                                         | N/A                                            |
+| Rule 92901 deployment        | Yes                                 | Succeeded on second try                              | Verified 0 FP                                  |
+| Wazuh manager restart        | Yes, failed first                   | Succeeded after XML fix                              | N/A                                            |
 
 ## Detection Coverage Chart
 
@@ -372,12 +372,12 @@ GET wazuh-alerts-*/_search
 
 ## Final Score
 
-| Category | Result |
-|---|---|
-| Techniques confirmed detected | 2 out of 9 (Password Spray and DCSync) |
-| Techniques partially visible | 2 out of 9 (Reconnaissance and Kerberoasting) |
-| Techniques not detected | 5 out of 9 (AS-REP Roasting, LSASS actual dump, Pass the Hash, Golden Ticket, Registry Persistence) |
-| False positive issue resolved | 1 (LSASS rule 92900 tuned via 92901) |
-| Wazuh rule deployment issues | 1 (XML syntax error on first attempt) |
+| Category                      | Result                                                                                              |
+|-------------------------------|-----------------------------------------------------------------------------------------------------|
+| Techniques confirmed detected | 2 out of 9 (Password Spray and DCSync)                                                              |
+| Techniques partially visible  | 2 out of 9 (Reconnaissance and Kerberoasting)                                                       |
+| Techniques not detected       | 5 out of 9 (AS-REP Roasting, LSASS actual dump, Pass the Hash, Golden Ticket, Registry Persistence) |
+| False positive issue resolved | 1 (LSASS rule 92900 tuned via 92901)                                                                |
+| Wazuh rule deployment issues  | 1 (XML syntax error on first attempt)                                                               |
 
 The 2 confirmed detections score overstates coverage if you include what was not verified. Several events were ingested but not traced back to specific rules during the session. A more complete blue team exercise would revisit each technique with a fresh set of targeted queries to account for everything that was attempted.

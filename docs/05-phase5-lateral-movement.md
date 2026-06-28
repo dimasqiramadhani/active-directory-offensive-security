@@ -107,10 +107,10 @@ SMB  192.168.90.121  445  WINDOWS-AD-DC
 
 ## Wazuh Detection
 
-| Technique | Event ID | Rule | Status |
-|---|---|---|---|
-| WinRM Lateral Movement | 4624 Type 3 | 60106 | DETECTED at level 5 |
-| Pass the Hash | 4624 Type 3 NTLM keyLength 0 | 92758 | Needs custom rule |
+| Technique              | Event ID                     | Rule  | Status              |
+|------------------------|------------------------------|-------|---------------------|
+| WinRM Lateral Movement | 4624 Type 3                  | 60106 | DETECTED at level 5 |
+| Pass the Hash          | 4624 Type 3 NTLM keyLength 0 | 92758 | Needs custom rule   |
 
 Query to identify Pass the Hash pattern:
 

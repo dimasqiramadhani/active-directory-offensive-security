@@ -1,6 +1,6 @@
 # Active Directory Red Team Detection Lab
 
-This project documents a full end-to-end red team simulation against an Active Directory environment using real-world attack techniques. Every attack phase is paired with blue team detection analysis via Wazuh SIEM, including rule tuning and detection gap identification. This documentation captures exactly what happened during the lab session, including errors, troubleshooting steps, and environment constraints.
+This project documents a full end-to-end red team simulation against an Active Directory environment using real world attack techniques. Every attack phase is paired with blue team detection analysis via Wazuh SIEM, including rule tuning and detection gap identification. This documentation captures exactly what happened during the lab session, including errors, troubleshooting steps, and environment constraints.
 
 
 > **Ruleset v2 note:** The detection ruleset in `rules/windows_redteam_detection.xml` has been
@@ -76,11 +76,11 @@ graph TB
 
 Created manually via PowerShell on the DC before starting the attack phases:
 
-| Account | Vulnerability | Password | Detail |
-|---|---|---|---|
-| john.doe | Regular domain user (initial foothold) | Winter2024! | Created with New-ADUser |
-| svc-backup | Kerberoastable | password123 | SPN: HTTP/backup.lab.local |
-| svc-legacy | AS-REP Roastable | password123 | DoesNotRequirePreAuth = True via Set-ADAccountControl |
+| Account    | Vulnerability                          | Password    | Detail                                                |
+|------------|----------------------------------------|-------------|-------------------------------------------------------|
+| john.doe   | Regular domain user (initial foothold) | Winter2024! | Created with New-ADUser                               |
+| svc-backup | Kerberoastable                         | password123 | SPN: HTTP/backup.lab.local                            |
+| svc-legacy | AS-REP Roastable                       | password123 | DoesNotRequirePreAuth = True via Set-ADAccountControl |
 
 > Note: Initial passwords Backup2024! and Legacy2024! were not present in rockyou.txt so hashcat could not crack them. After disabling domain password complexity policy via secedit, passwords were reset to password123 which is a common rockyou entry.
 
@@ -440,18 +440,18 @@ flowchart LR
 
 ## Nmap Port Access Summary
 
-| Port | Service | DC 192.168.90.121 | Agent 192.168.90.122 | Agent 192.168.90.123 |
-|---|---|---|---|---|
-| 53 | DNS | OPEN | FILTERED | FILTERED |
-| 88 | Kerberos | OPEN | FILTERED | FILTERED |
-| 135 | MSRPC | OPEN | FILTERED | FILTERED |
-| 139 | NetBIOS | OPEN | FILTERED | FILTERED |
-| 389 | LDAP | OPEN | FILTERED | FILTERED |
-| 445 | SMB | OPEN | FILTERED | FILTERED |
-| 636 | LDAPS | OPEN | FILTERED | FILTERED |
-| 3268 | GC LDAP | OPEN | FILTERED | FILTERED |
-| 3389 | RDP | OPEN | OPEN | OPEN |
-| 5985 | WinRM | OPEN | OPEN | OPEN |
+| Port | Service  | DC 192.168.90.121 | Agent 192.168.90.122 | Agent 192.168.90.123 |
+|------|----------|-------------------|----------------------|----------------------|
+| 53   | DNS      | OPEN              | FILTERED             | FILTERED             |
+| 88   | Kerberos | OPEN              | FILTERED             | FILTERED             |
+| 135  | MSRPC    | OPEN              | FILTERED             | FILTERED             |
+| 139  | NetBIOS  | OPEN              | FILTERED             | FILTERED             |
+| 389  | LDAP     | OPEN              | FILTERED             | FILTERED             |
+| 445  | SMB      | OPEN              | FILTERED             | FILTERED             |
+| 636  | LDAPS    | OPEN              | FILTERED             | FILTERED             |
+| 3268 | GC LDAP  | OPEN              | FILTERED             | FILTERED             |
+| 3389 | RDP      | OPEN              | OPEN                 | OPEN                 |
+| 5985 | WinRM    | OPEN              | OPEN                 | OPEN                 |
 
 SMB port 445 and RPC port 135 are filtered on both agents. This rules out PsExec and WMIExec as lateral movement options. WinRM on port 5985 is the only viable remote execution path to the agents besides RDP.
 
@@ -459,36 +459,36 @@ SMB port 445 and RPC port 135 are filtered on both agents. This rules out PsExec
 
 ## Kill Chain Summary Table
 
-| Phase | Technique | MITRE | Tools | Actual Result |
-|---|---|---|---|---|
-| Phase 0 | Connectivity | N/A | OpenVPN | tun0 192.168.24.2, RTT 22ms to DC |
-| AD Setup | Lab Preparation | N/A | PowerShell on DC | 3 vulnerable users created, Set-ADAccountControl used |
-| Phase 1 | Reconnaissance | T1046 T1087.002 T1069.002 | nmap ldapdomaindump bloodhound-python | 7 users 3 computers 52 groups dumped |
-| Phase 2 | Password Spray | T1110.003 | netexec 1.5.1 (crackmapexec failed) | john.doe:Winter2024! compromised |
-| Phase 3 | Exec and Persistence | T1059.001 T1547.001 T1562.001 | evil-winrm after WinRM fix | Shell on win-agent-01, HKCU Run key, AMSI bypass |
-| Phase 3 | Scheduled Task (failed) | T1053.005 | schtasks | Access denied, john.doe not local admin |
-| Phase 4 | Kerberoasting | T1558.003 | GetUserSPNs hashcat | svc-backup:password123 cracked in 0 seconds |
-| Phase 4 | AS-REP Roasting | T1558.004 | GetNPUsers hashcat | svc-legacy:password123 cracked in 0 seconds |
-| Phase 4 | LSASS Dump | T1003.001 | comsvcs.dll pypykatz | Administrator NTLM bf27edd1 harvested |
-| Phase 5 | Lateral via WinRM | T1021.006 | evil-winrm | Shell on win-agent-02 as local admin |
-| Phase 5 | Pass the Hash | T1550.002 | nxc smb | Pwn3d on DC |
-| Phase 6 | DCSync | T1003.006 | secretsdump | All 9 domain account hashes dumped |
-| Phase 6 | Golden Ticket | T1558.001 | ticketer AES256 | Forged but blocked by KDC_ERR_TGT_REVOKED |
-| Phase 6 | DA Shell | N/A | evil-winrm PtH | lab\\administrator on windows-ad-dc confirmed |
-| Blue Team | Detection Review | N/A | OpenSearch Dev Tools | 4 confirmed 2 partial 3 gaps identified |
-| Blue Team | Rule Tuning | N/A | Wazuh manager rules | Rule 92901 present since June 19 but not loaded until manager restart (see CHANGELOG v2.1) |
+| Phase     | Technique               | MITRE ATT&CK                  | Tools                                 | Actual Result                                                                              |
+|-----------|-------------------------|-------------------------------|---------------------------------------|--------------------------------------------------------------------------------------------|
+| Phase 0   | Connectivity            | N/A                           | OpenVPN                               | tun0 192.168.24.2, RTT 22ms to DC                                                          |
+| AD Setup  | Lab Preparation         | N/A                           | PowerShell on DC                      | 3 vulnerable users created, Set-ADAccountControl used                                      |
+| Phase 1   | Reconnaissance          | T1046 T1087.002 T1069.002     | nmap ldapdomaindump bloodhound-python | 7 users 3 computers 52 groups dumped                                                       |
+| Phase 2   | Password Spray          | T1110.003                     | netexec 1.5.1 (crackmapexec failed)   | john.doe:Winter2024! compromised                                                           |
+| Phase 3   | Exec and Persistence    | T1059.001 T1547.001 T1562.001 | evil-winrm after WinRM fix            | Shell on win-agent-01, HKCU Run key, AMSI bypass                                           |
+| Phase 3   | Scheduled Task (failed) | T1053.005                     | schtasks                              | Access denied, john.doe not local admin                                                    |
+| Phase 4   | Kerberoasting           | T1558.003                     | GetUserSPNs hashcat                   | svc-backup:password123 cracked in 0 seconds                                                |
+| Phase 4   | AS-REP Roasting         | T1558.004                     | GetNPUsers hashcat                    | svc-legacy:password123 cracked in 0 seconds                                                |
+| Phase 4   | LSASS Dump              | T1003.001                     | comsvcs.dll pypykatz                  | Administrator NTLM bf27edd1 harvested                                                      |
+| Phase 5   | Lateral via WinRM       | T1021.006                     | evil-winrm                            | Shell on win-agent-02 as local admin                                                       |
+| Phase 5   | Pass the Hash           | T1550.002                     | nxc smb                               | Pwn3d on DC                                                                                |
+| Phase 6   | DCSync                  | T1003.006                     | secretsdump                           | All 9 domain account hashes dumped                                                         |
+| Phase 6   | Golden Ticket           | T1558.001                     | ticketer AES256                       | Forged but blocked by KDC_ERR_TGT_REVOKED                                                  |
+| Phase 6   | DA Shell                | N/A                           | evil-winrm PtH                        | lab\\administrator on windows-ad-dc confirmed                                              |
+| Blue Team | Detection Review        | N/A                           | OpenSearch Dev Tools                  | 4 confirmed 2 partial 3 gaps identified                                                    |
+| Blue Team | Rule Tuning             | N/A                           | Wazuh manager rules                   | Rule 92901 present since June 19 but not loaded until manager restart (see CHANGELOG v2.1) |
 
 ---
 
 ## Wazuh Detection Summary (Confirmed Evidence)
 
-| Phase | Rule ID | Event ID | Level | Status | Evidence |
-|---|---|---|---|---|---|
-| Phase 2 | 60122 | 4625 | 5 | DETECTED | 26 failed logons, 17 usernames from 192.168.24.2/.6 (re-validated) |
-| Phase 4 | 92900 | EID 10 | 12 | FP IDENTIFIED | 53 MsMpEng FP over 6 days; 92901 suppression confirmed loaded only after manager restart |
-| Phase 4 | N/A | 4769 | N/A | PARTIAL | svc-backup not isolated; all observed 4769 was normal 0x12 (AES) traffic |
-| Phase 4 | N/A | 4768 | N/A | NOT DETECTED | 0 hits due to audit policy gap |
-| Phase 6 | 110001 | 4662 | 12 | DETECTED | 57 events, level 12, mail true (re-validated) |
+| Phase   | Rule ID | Event ID | Level | Status        | Evidence                                                                                 |
+|---------|---------|----------|-------|---------------|------------------------------------------------------------------------------------------|
+| Phase 2 | 60122   | 4625     | 5     | DETECTED      | 26 failed logons, 17 usernames from 192.168.24.2/.6 (re-validated)                       |
+| Phase 4 | 92900   | EID 10   | 12    | FP IDENTIFIED | 53 MsMpEng FP over 6 days; 92901 suppression confirmed loaded only after manager restart |
+| Phase 4 | N/A     | 4769     | N/A   | PARTIAL       | svc-backup not isolated; all observed 4769 was normal 0x12 (AES) traffic                 |
+| Phase 4 | N/A     | 4768     | N/A   | NOT DETECTED  | 0 hits due to audit policy gap                                                           |
+| Phase 6 | 110001  | 4662     | 12    | DETECTED      | 57 events, level 12, mail true (re-validated)                                            |
 
 ---
 
@@ -535,22 +535,22 @@ SMB port 445 and RPC port 135 are filtered on both agents. This rules out PsExec
 
 Everything that went wrong during this session, in rough order of occurrence.
 
-| Issue | Root Cause | Resolution |
-|---|---|---|
-| ldapdomaindump auth failed | john.doe did not exist in AD yet | AD setup needed to happen before recon |
-| bloodhound-python Kerberos error | KDC_ERR_C_PRINCIPAL_UNKNOWN for john.doe | bloodhound-python fell back to NTLM automatically, collection still worked |
-| Set-ADUserControl not found | Cmdlet does not exist in PowerShell | Replace with Set-ADAccountControl |
-| crackmapexec installation failed twice | python3-terminaltables3 4.0.0-7 removed from repo | apt update then apt install netexec |
-| hashcat rockyou.txt not found | Wordlist still compressed | gunzip /usr/share/wordlists/rockyou.txt.gz |
-| First hashcat attempt exhausted | Backup2024! and Legacy2024! not in rockyou | Reset service account passwords on DC |
-| password123 rejected by DC | Domain password complexity policy active | Disable complexity via secedit and net accounts |
-| Evil-WinRM shell opened then immediately dropped | john.doe not in Remote Management Users group | Add to AD group and directly to local group on agent, restart WinRM |
-| schtasks access denied twice | Medium Mandatory Level via WinRM insufficient | Abandoned this technique, registry persistence used instead |
-| Golden Ticket attempt 1 failed | NTLM-based ticket rejected by WS2022 | Retried with AES256 key |
-| Golden Ticket attempt 2 failed | AES256 ticket still KDC_ERR_TGT_REVOKED | Tried disabling PAC validation on DC |
-| PAC validation disable did not help | WS2022 enforces multiple validation layers | Golden Ticket abandoned, used Pass the Hash instead |
-| windows_custom_rules.xml broke Wazuh manager | Rule element not wrapped in group tag | Added group wrapper, restarted successfully |
-| Suppression rule 92901 had no effect | Rule on disk since June 19 but manager ran 6 days without restart, so it was never loaded into memory | `systemctl restart wazuh-manager`; verified `etc/rules` is registered in `ossec.conf` and rule loads on boot |
+| Issue                                            | Root Cause                                                                                            | Resolution                                                                                                   |
+|--------------------------------------------------|-------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------|
+| ldapdomaindump auth failed                       | john.doe did not exist in AD yet                                                                      | AD setup needed to happen before recon                                                                       |
+| bloodhound-python Kerberos error                 | KDC_ERR_C_PRINCIPAL_UNKNOWN for john.doe                                                              | bloodhound-python fell back to NTLM automatically, collection still worked                                   |
+| Set-ADUserControl not found                      | Cmdlet does not exist in PowerShell                                                                   | Replace with Set-ADAccountControl                                                                            |    
+| crackmapexec installation failed twice           | python3-terminaltables3 4.0.0-7 removed from repo                                                     | apt update then apt install netexec                                                                          |
+| hashcat rockyou.txt not found                    | Wordlist still compressed                                                                             | gunzip /usr/share/wordlists/rockyou.txt.gz                                                                   |
+| First hashcat attempt exhausted                  | Backup2024! and Legacy2024! not in rockyou                                                            | Reset service account passwords on DC                                                                        |
+| password123 rejected by DC                       | Domain password complexity policy active                                                              | Disable complexity via secedit and net accounts                                                              |
+| Evil-WinRM shell opened then immediately dropped | john.doe not in Remote Management Users group                                                         | Add to AD group and directly to local group on agent, restart WinRM                                          |
+| schtasks access denied twice                     | Medium Mandatory Level via WinRM insufficient                                                         | Abandoned this technique, registry persistence used instead                                                  |
+| Golden Ticket attempt 1 failed                   | NTLM-based ticket rejected by WS2022                                                                  | Retried with AES256 key                                                                                      |
+| Golden Ticket attempt 2 failed                   | AES256 ticket still KDC_ERR_TGT_REVOKED                                                               | Tried disabling PAC validation on DC                                                                         |
+| PAC validation disable did not help              | WS2022 enforces multiple validation layers                                                            | Golden Ticket abandoned, used Pass the Hash instead                                                          |
+| windows_custom_rules.xml broke Wazuh manager     | Rule element not wrapped in group tag                                                                 | Added group wrapper, restarted successfully                                                                  |
+| Suppression rule 92901 had no effect             | Rule on disk since June 19 but manager ran 6 days without restart, so it was never loaded into memory | `systemctl restart wazuh-manager`; verified `etc/rules` is registered in `ossec.conf` and rule loads on boot |
 
 ---
 
@@ -607,4 +607,10 @@ Lab Management: Proxmox VE on remote hypervisors, OpenVPN
 
 ---
 
-> Portfolio: laborology | dimasqiramadhani@gmail.com | github.com/dimasqiramadhani | wa.me/6282254331579
+## Author
+
+Dimasqi Ramadhani, Security Engineer
+
+- [Portfolio](https://dimasqiramadhani.com)
+- [Github](https://github.com/dimasqiramadhani)
+- [Linkedin](https://linkedin.com/in/dimasqiramadhani)

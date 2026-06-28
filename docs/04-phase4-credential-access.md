@@ -194,20 +194,20 @@ pypykatz also reported an ssp_exception for the SSP template (architecture KatzS
 
 ## Credential Harvest Summary
 
-| Account | Method | Credential |
-|---|---|---|
-| john.doe | Password Spray | Winter2024! |
-| svc-backup | Kerberoasting, two rounds | password123 |
-| svc-legacy | AS-REP Roasting | password123 |
+| Account       | Method                     | Credential                    |
+|---------------|----------------------------|-------------------------------|
+| john.doe      | Password Spray             | Winter2024!                   |
+| svc-backup    | Kerberoasting, two rounds  | password123                   |
+| svc-legacy    | AS-REP Roasting            | password123                   |
 | Administrator | LSASS Dump on win-agent-02 | NTLM bf27edd1…[REDACTED-NTLM] |
 
 ## Wazuh Detection
 
-| Technique | Event | Status | What Happened |
-|---|---|---|---|
-| Kerberoasting | 4769 seven hits | Partial | Event ingested but custom rule 92755 did not fire due to field name mismatch for ticketEncryptionType |
-| AS-REP Roasting | 4768 zero hits | Not detected | Kerberos Authentication Service audit subcategory not enabled on DC |
-| LSASS Dump | Sysmon EID 10 | False positives tuned | Rule 92900 fired 16 times but all from MsMpEng.exe, not from the actual dump |
+| Technique       | Event           | Status                | What Happened                                                                                         |
+|-----------------|-----------------|-----------------------|-------------------------------------------------------------------------------------------------------|
+| Kerberoasting   | 4769 seven hits | Partial               | Event ingested but custom rule 92755 did not fire due to field name mismatch for ticketEncryptionType |
+| AS-REP Roasting | 4768 zero hits  | Not detected          | Kerberos Authentication Service audit subcategory not enabled on DC                                   |
+| LSASS Dump      | Sysmon EID 10   | False positives tuned | Rule 92900 fired 16 times but all from MsMpEng.exe, not from the actual dump                          |
 
 The actual LSASS dump from rundll32 comsvcs.dll did not generate a clear standalone alert distinguishable from the Defender noise at the time of the attack. After deploying rule 92901 to suppress Defender events, any future dump from a non-Defender process would be visible.
 

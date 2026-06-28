@@ -149,13 +149,13 @@ This step was performed later on win-agent-02 (after lateral movement in Phase 5
 
 ## Wazuh Detection
 
-| Technique | Event | Status | Note |
-|---|---|---|---|
-| WinRM logon | 4624 Type 3 | Detected | Network logon from 192.168.24.2 |
-| PowerShell encoded | 4104 Script Block | Not verified | PowerShell Script Block Logging was not confirmed enabled |
-| Scheduled task first attempt | None | N/A | Access denied before event could be created |
-| Scheduled task second attempt | None | N/A | Same result |
-| Registry Run Key | Sysmon EID 13 | Not verified in dashboard | HKCU CurrentVersion Run write should generate this event |
-| AMSI bypass | 4104 | Not verified | Would appear in script block log if logging was active |
+| Technique                     | Event             | Status                    | Note                                                      |
+|-------------------------------|-------------------|---------------------------|-----------------------------------------------------------|
+| WinRM logon                   | 4624 Type 3       | Detected                  | Network logon from 192.168.24.2                           |
+| PowerShell encoded            | 4104 Script Block | Not verified              | PowerShell Script Block Logging was not confirmed enabled |
+| Scheduled task first attempt  | None              | N/A                       | Access denied before event could be created               |
+| Scheduled task second attempt | None              | N/A                       | Same result                                               |
+| Registry Run Key              | Sysmon EID 13     | Not verified in dashboard | HKCU CurrentVersion Run write should generate this event  |
+| AMSI bypass                   | 4104              | Not verified              | Would appear in script block log if logging was active    |
 
 The registry and AMSI detections were not checked in the Wazuh dashboard during this session. The event data should exist if Sysmon and PowerShell logging are configured, but this was not confirmed.

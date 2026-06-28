@@ -25,26 +25,26 @@ Three classes of problem made v1 under-detect:
 
 ## Technique -> Detection matrix (v2)
 
-| # | Technique (executed) | Event(s) | Rule (v2) | Status after v2 | Dependency |
-|---|---|---|---|---|---|
-| 1 | BloodHound / LDAP recon | 4662 | 92750 (freq 15/30s) | Detected (volume) | DS Access audit + SACL |
-| 2 | Password spray | 4625 | 92751 (freq 5/60s) | Detected (correlated) | Logon failure audit |
-| 3 | Encoded / cradle PowerShell | 4104 | 92752 | Detected | ScriptBlockLogging |
-| 4 | AMSI bypass | 4104 | 92762 | Detected | ScriptBlockLogging |
-| 5 | Scheduled task (attempted) | 4698 | 92753 | Detected when it fires | anchor fixed |
-| 6 | Registry Run key persistence | Sysmon 13 | 92754 | Detected | Sysmon RegistryEvent |
-| 7 | Kerberoasting | 4769 (0x17) | 92755 | Detected | value format fixed |
-| 8 | AS-REP roasting | 4768 (preauth 0) | 92756 | Detected | **Kerberos AS audit (was OFF)** |
-| 9 | AS-REP target creation | 4738 | 92765 | Detected | UAC audit |
-| 10 | LSASS dump | Sysmon 10 | 92757 + 92901 suppress | Detected, FP-suppressed | Sysmon ProcessAccess |
-| 11 | Defender real-time disable | Defender 5001 | 92761 | Detected | **Defender channel forward** |
-| 11b| Defender disable (reg route) | Sysmon 13 | 92767 | Detected (backup path) | Sysmon RegistryEvent |
-| 12 | Pass the Hash to DC | 4624 T3 NTLM | 92758 | Detected | anchor + value fixed |
-| 13 | Service-install lateral | 7045 | 92759 | Detected | anchor fixed |
-| 14 | DCSync | 4662 + GUID | 92760 (or built-in 110001) | Detected | DS Access audit |
-| 15 | Forged/Golden ticket (rejected) | 4769 status 0x1F | 92763 | Detected (rejection) | Kerberos TGS audit |
-| 16 | Password policy downgrade | 4739 | 92764 | Detected | Policy Change audit |
-| 17 | Privileged group change | 4728/4732/4756 | 92766 | Detected | Group Mgmt audit |
+| #   | Technique (executed)            | Event(s)         | Rule (v2)                  | Status after v2         | Dependency                      |
+|-----|---------------------------------|------------------|----------------------------|-------------------------|---------------------------------|
+| 1   | BloodHound / LDAP recon         | 4662             | 92750 (freq 15/30s)        | Detected (volume)       | DS Access audit + SACL          |
+| 2   | Password spray                  | 4625             | 92751 (freq 5/60s)         | Detected (correlated)   | Logon failure audit             |
+| 3   | Encoded / cradle PowerShell     | 4104             | 92752                      | Detected                | ScriptBlockLogging              |
+| 4   | AMSI bypass                     | 4104             | 92762                      | Detected                | ScriptBlockLogging              |
+| 5   | Scheduled task (attempted)      | 4698             | 92753                      | Detected when it fires  | anchor fixed                    |
+| 6   | Registry Run key persistence    | Sysmon 13        | 92754                      | Detected                | Sysmon RegistryEvent            |
+| 7   | Kerberoasting                   | 4769 (0x17)      | 92755                      | Detected                | value format fixed              |
+| 8   | AS-REP roasting                 | 4768 (preauth 0) | 92756                      | Detected                | **Kerberos AS audit (was OFF)** |
+| 9   | AS-REP target creation          | 4738             | 92765                      | Detected                | UAC audit                       |
+| 10  | LSASS dump                      | Sysmon 10        | 92757 + 92901 suppress     | Detected, FP-suppressed | Sysmon ProcessAccess            |
+| 11  | Defender real-time disable      | Defender 5001    | 92761                      | Detected                | **Defender channel forward**    |
+| 11b | Defender disable (reg route)    | Sysmon 13        | 92767                      | Detected (backup path)  | Sysmon RegistryEvent            |
+| 12  | Pass the Hash to DC             | 4624 T3 NTLM     | 92758                      | Detected                | anchor + value fixed            |
+| 13  | Service-install lateral         | 7045             | 92759                      | Detected                | anchor fixed                    |
+| 14  | DCSync                          | 4662 + GUID      | 92760 (or built-in 110001) | Detected                | DS Access audit                 |
+| 15  | Forged/Golden ticket (rejected) | 4769 status 0x1F | 92763                      | Detected (rejection)    | Kerberos TGS audit              |
+| 16  | Password policy downgrade       | 4739             | 92764                      | Detected                | Policy Change audit             |
+| 17  | Privileged group change         | 4728/4732/4756   | 92766                      | Detected                | Group Mgmt audit                |
 
 ## The Golden Ticket detection, corrected
 

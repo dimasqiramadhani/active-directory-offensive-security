@@ -45,11 +45,11 @@ win-agent-02 192.168.90.123:
 
 ### Attack Surface Summary
 
-| Target | SMB 445 | RPC 135 | WinRM 5985 | Kerberos 88 |
-|---|---|---|---|---|
-| DC 192.168.90.121 | OPEN | OPEN | OPEN | OPEN |
-| Agent 192.168.90.122 | FILTERED | FILTERED | OPEN | FILTERED |
-| Agent 192.168.90.123 | FILTERED | FILTERED | OPEN | FILTERED |
+| Target               | SMB 445  | RPC 135  | WinRM 5985 | Kerberos 88 |
+|----------------------|----------|----------|------------|-------------|
+| DC 192.168.90.121    | OPEN     | OPEN     | OPEN       | OPEN        |
+| Agent 192.168.90.122 | FILTERED | FILTERED | OPEN       | FILTERED    |
+| Agent 192.168.90.123 | FILTERED | FILTERED | OPEN       | FILTERED    |
 
 WinRM on port 5985 is the only viable remote execution path to the agents.
 
@@ -104,11 +104,11 @@ Compressing output into 20260619151704_bloodhound.zip
 
 ## Wazuh Detection
 
-| Event ID | Description | Count |
-|---|---|---|
-| 4624 | Network logon from john.doe to DC | Multiple |
-| 4662 | Directory Service Access via LDAP queries | Multiple |
-| 5145 | Network share access to SYSVOL and IPC | Multiple |
+| Event ID | Description                               | Count    |
+|----------|-------------------------------------------|----------|
+| 4624     | Network logon from john.doe to DC         | Multiple |
+| 4662     | Directory Service Access via LDAP queries | Multiple |
+| 5145     | Network share access to SYSVOL and IPC    | Multiple |
 
 Dashboard query to spot this activity:
 

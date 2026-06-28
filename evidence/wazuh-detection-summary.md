@@ -88,14 +88,14 @@ Golden Ticket rejection events (should have generated nothing since ticket was r
 
 ## All Credentials Obtained
 
-| Account | Credential | How |
-|---|---|---|
-| john.doe | Winter2024! | Password spray |
-| svc-backup | password123 | Kerberoasting, required two crack attempts |
-| svc-legacy | password123 | AS-REP Roasting |
-| Administrator | NTLM bf27edd1…[REDACTED-NTLM] | LSASS dump on win-agent-02 |
-| krbtgt | NTLM 434b1005…[REDACTED-KRBTGT-NTLM] AES256 8b2a169c... | DCSync |
-| All 9 domain accounts | See Phase 6 DCSync output | DCSync via DRSUAPI |
+| Account               | Credential                                              | How                                        |
+|-----------------------|---------------------------------------------------------|--------------------------------------------|
+| john.doe              | Winter2024!                                             | Password spray                             |
+| svc-backup            | password123                                             | Kerberoasting, required two crack attempts |
+| svc-legacy            | password123                                             | AS-REP Roasting                            |
+| Administrator         | NTLM bf27edd1…[REDACTED-NTLM]                           | LSASS dump on win-agent-02                 |
+| krbtgt                | NTLM 434b1005…[REDACTED-KRBTGT-NTLM] AES256 8b2a169c... | DCSync                                     |
+| All 9 domain accounts | See Phase 6 DCSync output                               | DCSync via DRSUAPI                         |
 
 ## What Did Not Work
 

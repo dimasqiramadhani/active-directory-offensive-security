@@ -100,17 +100,17 @@ EOF
 
 ## Port Access Matrix from Nmap Scan
 
-| Port | Service | DC 192.168.90.121 | Agent 192.168.90.122 | Agent 192.168.90.123 |
-|---|---|---|---|---|
-| 53 | DNS | OPEN | FILTERED | FILTERED |
-| 88 | Kerberos | OPEN | FILTERED | FILTERED |
-| 135 | MSRPC | OPEN | FILTERED | FILTERED |
-| 139 | NetBIOS | OPEN | FILTERED | FILTERED |
-| 389 | LDAP | OPEN | FILTERED | FILTERED |
-| 445 | SMB | OPEN | FILTERED | FILTERED |
-| 636 | LDAPS | OPEN | FILTERED | FILTERED |
-| 3268 | GC LDAP | OPEN | FILTERED | FILTERED |
-| 3389 | RDP | OPEN | OPEN | OPEN |
-| 5985 | WinRM | OPEN | OPEN | OPEN |
+| Port | Service  | DC 192.168.90.121 | Agent 192.168.90.122 | Agent 192.168.90.123 |
+|------|----------|-------------------|----------------------|----------------------|
+| 53   | DNS      | OPEN              | FILTERED             | FILTERED             |
+| 88   | Kerberos | OPEN              | FILTERED             | FILTERED             |
+| 135  | MSRPC    | OPEN              | FILTERED             | FILTERED             |
+| 139  | NetBIOS  | OPEN              | FILTERED             | FILTERED             |
+| 389  | LDAP     | OPEN              | FILTERED             | FILTERED             |
+| 445  | SMB      | OPEN              | FILTERED             | FILTERED             |
+| 636  | LDAPS    | OPEN              | FILTERED             | FILTERED             |
+| 3268 | GC LDAP  | OPEN              | FILTERED             | FILTERED             |
+| 3389 | RDP      | OPEN              | OPEN                 | OPEN                 |
+| 5985 | WinRM    | OPEN              | OPEN                 | OPEN                 |
 
 VPN routing is one-directional. The victim machines cannot initiate connections back to Kali. SMB and RPC are filtered on both agents, which means PsExec and WMIExec will not work directly against agents. WinRM on port 5985 is the only remote execution path available on agents besides RDP.
